@@ -1,7 +1,13 @@
 import sys
-import matplotlib
 
-matplotlib.use('Agg')
+
+# Matplotlib no longer a dependency
+try:
+    import matplotlib
+
+    matplotlib.use('Agg')
+except ImportError:
+    pass
 
 import skimage
 
