@@ -16,7 +16,7 @@ source:
     #- pr_hmaarrfk_1_remove_tests_from_init.diff
 
 build:
-  number: 3
+  number: 0
   script:
     - rm -f skimage/run-hessian.py
     - rm -rf skimage/viewer/tests  # we don't depend on Qt
@@ -28,12 +28,12 @@ requirements:
   build:
     - {{ compiler("c") }}
     - {{ compiler("cxx") }}
+    - m2-patch  # [win]
   host:
     - python
-    - ccache
     - pip
+    - conda-forge:numpy 1.11.3
     - cython >=0.23
-    - numpy 1.11.3
     - scipy >=0.17
     - numpydoc >=0.6
     - msinttypes  # [win and py<35]
