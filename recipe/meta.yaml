@@ -8,13 +8,12 @@ source:
   git_url: https://github.com/scikit-image/scikit-image
   patches:
     - pr_3147_simplify_build_process.diff
-    - pr_3146_bugfix_seperate_stains_log10.diff
-    - pr_3143_supress_warnings_for_flatten_during_testing.diff
-    - pr_3126_imageio_preferred_over_PIL.diff
-    - pr_3103_bugfix_ellipsis_fitting_32bit.diff
-    - pr_3077_feature_transform_geometry.diff
-    - pr_3069_feature_rectangle_perimeter.diff
     - pr_3057_feature_bayer2rgb.diff
+    - pr_3069_feature_rectangle_perimeter.diff
+    - pr_3077_feature_transform_geometry.diff
+    - pr_3103_bugfix_ellipsis_fitting_32bit.diff
+    - pr_3126_imageio_preferred_over_PIL.diff
+    #- pr_hmaarrfk_1_remove_tests_from_init.diff
 
 build:
   number: 3
