@@ -1,0 +1,245 @@
+diff --git a/.travis.yml b/.travis.yml
+index f04ee7959c..08655f1caf 100644
+--- a/.travis.yml
++++ b/.travis.yml
+@@ -38,16 +38,16 @@ matrix:
+   include:
+     - os: linux
+       python: 3.5
+-      env: OPTIONAL_DEPS=1 WITH_PYSIDE=1 BUILD_DOCS=1
++      env: MINIMUM_REQUIREMENTS=1 OPTIONAL_DEPS=0 BUILD_DOCS=0
+     - os: linux
+       python: 3.5
+-      env: QT=PyQt5 WITH_PYAMG=1 MINIMUM_REQUIREMENTS=1
++      env: QT=PyQt5 WITH_PYAMG=1
+     - os: linux
+       python: 3.6
+-      env: QT=PyQt5 WITH_PYAMG=1 OPTIONAL_DEPS=1 BUILD_DOCS=1 DEPLOY_DOCS=1
++      env: QT=PyQt5 WITH_PYAMG=1 DEPLOY_DOCS=1
+     - os: linux
+       python: 3.6
+-      env: QT=PyQt5 WITH_PYAMG=1 OPTIONAL_DEPS=1 PIP_FLAGS="--pre"
++      env: QT=PyQt5 WITH_PYAMG=1 PIP_FLAGS="--pre"
+     - os: osx
+       osx_image: xcode9
+       language: objective-c
+@@ -65,11 +65,13 @@ before_install:
+     - export PATH=/usr/lib/ccache:${PATH}
+     - source tools/travis/before_install.sh
+     - which python; python --version
+-    - tools/build_versions.py
+     - tools/check_sdist.py
+ 
+ install:
+-    - python setup.py develop
++    - pip install . --no-deps
++    # Only install requirements after the build process in case we pinned
++    # them
++    - pip install --retries 3 -q $PIP_FLAGS -r requirements.txt
+     # Matplotlib settings - do not show figures during doc examples
+     - |
+       if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
+@@ -81,8 +83,8 @@ install:
+     - touch ${MPL_DIR}/matplotlibrc
+     # Install most of the optional packages
+     - |
+-      if [[ "${OPTIONAL_DEPS}" == "1" ]]; then
+-        pip install --retries 3 -q -r ./requirements/optional.txt $WHEELHOUSE
++      if [[ "${OPTIONAL_DEPS}" != "0" ]]; then
++        pip install --retries 3 -q -r ./requirements/optional.txt
+       fi
+     - |
+       if [[ "${WITH_PYAMG}" == "1" ]]; then
+diff --git a/requirements/build.txt b/requirements/build.txt
+index b71b135a13..4293b509ba 100644
+--- a/requirements/build.txt
++++ b/requirements/build.txt
+@@ -1,2 +1,4 @@
+-Cython>=0.23
++Cython>=0.23.4
+ wheel
++numpydoc>=0.6
++numpy>=1.11
+diff --git a/requirements/optional.txt b/requirements/optional.txt
+index ad4f25676f..3226882948 100644
+--- a/requirements/optional.txt
++++ b/requirements/optional.txt
+@@ -1,4 +1,3 @@
+-PySide; python_version <= '3.4'
+ imread
+ SimpleITK
+ astropy
+diff --git a/requirements/test.txt b/requirements/test.txt
+index 9955deccd9..ddc898d2e8 100644
+--- a/requirements/test.txt
++++ b/requirements/test.txt
+@@ -1,2 +1,4 @@
+ pytest
+ pytest-cov
++flake8
++codecov
+diff --git a/setup.py b/setup.py
+index 74115d5d60..6559872dac 100644
+--- a/setup.py
++++ b/setup.py
+@@ -88,14 +88,6 @@ def configuration(parent_package='', top_path=None):
+     try:
+         from numpy.distutils.core import setup
+         extra = {'configuration': configuration}
+-        # Do not try and upgrade larger dependencies
+-        for lib in ['scipy', 'numpy', 'matplotlib', 'pillow']:
+-            try:
+-                __import__(lib)
+-                INSTALL_REQUIRES = [i for i in INSTALL_REQUIRES
+-                                    if lib not in i]
+-            except ImportError:
+-                pass
+     except ImportError:
+         if len(sys.argv) >= 2 and ('--help' in sys.argv[1:] or
+                                    sys.argv[1] in ('--help-commands',
+diff --git a/skimage/io/_plugins/imread_plugin.py b/skimage/io/_plugins/imread_plugin.py
+index 3f63100aea..8a296b7559 100644
+--- a/skimage/io/_plugins/imread_plugin.py
++++ b/skimage/io/_plugins/imread_plugin.py
+@@ -6,7 +6,7 @@
+     import imread as _imread
+ except ImportError:
+     raise ImportError("Imread could not be found"
+-                      "Please refer to http://pypi.python.org/pypi/imread/ "
++                      "Please refer to http://pypi.org/pypi/imread/ "
+                       "for further instructions.")
+ 
+ 
+diff --git a/tools/build_versions.py b/tools/build_versions.py
+deleted file mode 100755
+index 681e5d2168..0000000000
+--- a/tools/build_versions.py
++++ /dev/null
+@@ -1,16 +0,0 @@
+-#!/usr/bin/env python
+-
+-import numpy as np
+-import scipy as sp
+-import matplotlib as mpl
+-from PIL import Image
+-import Cython
+-import networkx
+-
+-
+-for m in (np, sp, mpl, Image, networkx, Cython):
+-    if m is Image:
+-        version = m.VERSION
+-    else:
+-        version = m.__version__
+-    print(m.__name__.rjust(10), ' ', version)
+diff --git a/tools/travis/before_install.sh b/tools/travis/before_install.sh
+index ffafe2a711..ac301a295a 100755
+--- a/tools/travis/before_install.sh
++++ b/tools/travis/before_install.sh
+@@ -3,34 +3,9 @@ set -ex
+ 
+ export PIP_DEFAULT_TIMEOUT=60
+ 
+-# This URL is for any extra wheels that are not available on pypi.  As of 14
+-# Jan 2017, the major packages such as numpy and matplotlib are up for all
+-# platforms.  The URL points to a Rackspace CDN belonging to the scikit-learn
+-# team.  Please contact Olivier Grisel or Matthew Brett if you need
+-# permissions for this folder.
+-EXTRA_WHEELS="https://5cf40426d9f06eb7461d-6fe47d9331aba7cd62fc36c7196769e4.ssl.cf2.rackcdn.com"
+-WHEELHOUSE="--find-links=$EXTRA_WHEELS"
+-
+-if [[ "$TRAVIS_OS_NAME" != "osx" ]]; then
+-    sh -e /etc/init.d/xvfb start
+-    # This one is for wheels we can only build on the travis precise container.
+-    # As of 14 Jan 2017, this is only pyside.  Also on Rackspace, see above.
+-    # To build new wheels for this container, consider using:
+-    # https://github.com/matthew-brett/travis-wheel-builder . The wheels from
+-    # that building repo upload to the container "travis-wheels" available at
+-    # https://8167b5c3a2af93a0a9fb-13c6eee0d707a05fa610c311eec04c66.ssl.cf2.rackcdn.com
+-    # You then need to transfer them to the container pointed to by the URL
+-    # below (called "precise-wheels" on the Rackspace interface).
+-    PRECISE_WHEELS="https://7d8d0debcc2964ae0517-cec8b1780d3c0de237cc726d565607b4.ssl.cf2.rackcdn.com"
+-    WHEELHOUSE="--find-links=$PRECISE_WHEELS $WHEELHOUSE"
+-fi
+-export WHEELHOUSE
+-
+ export DISPLAY=:99.0
+ export PYTHONWARNINGS="d,all:::skimage"
+ export TEST_ARGS="-v --doctest-modules"
+-WHEELBINARIES="matplotlib scipy pillow cython"
+-
+ retry () {
+     # https://gist.github.com/fungusakafungus/1026804
+     local retry_max=3
+@@ -48,26 +23,17 @@ retry () {
+     return 0
+ }
+ 
+-# add build dependencies
+-echo "cython>=0.23.4" >> requirements/default.txt
+-echo "numpydoc>=0.6" >> requirements/default.txt
+-
+ if [[ $MINIMUM_REQUIREMENTS == 1 ]]; then
++    sed -i 's/>=/==/g' requirements/build.txt
+     sed -i 's/>=/==/g' requirements/default.txt
++    sed -i 's/>=/==/g' requirements/docs.txt
++    sed -i 's/>=/==/g' requirements/optional.txt
++    sed -i 's/>=/==/g' requirements/test.txt
+ fi
+ 
+ python -m pip install --upgrade pip
+-pip install --retries 3 -q wheel flake8 codecov pytest pytest-cov
+-# install numpy from PyPI instead of our wheelhouse
+-pip install --retries 3 -q wheel numpy
+-
+-# install wheels
+-for requirement in $WHEELBINARIES; do
+-    WHEELS="$WHEELS $(grep $requirement requirements/default.txt)"
+-done
+-pip install --retries 3 -q $PIP_FLAGS $WHEELHOUSE $WHEELS
+ 
+-pip install --retries 3 -q $PIP_FLAGS -r requirements.txt
++pip install --retries 3 -q $PIP_FLAGS -r requirements/build.txt
+ 
+ # Show what's installed
+ pip list
+diff --git a/tools/travis/script.sh b/tools/travis/script.sh
+index 73ef95a72c..f6c9d328f5 100755
+--- a/tools/travis/script.sh
++++ b/tools/travis/script.sh
+@@ -1,33 +1,13 @@
+ #!/usr/bin/env bash
+ export PY=${TRAVIS_PYTHON_VERSION}
+ 
+-# Matplotlib settings - do not show figures during doc examples
+-if [[ $MINIMUM_REQUIREMENTS == 1 || $TRAVIS_OS_NAME == "osx" ]]; then
+-    MPL_DIR=$HOME/.matplotlib
+-else
+-    MPL_DIR=$HOME/.config/matplotlib
+-fi
+-
+-mkdir -p $MPL_DIR
+-touch $MPL_DIR/matplotlibrc
+-
+-if [[ $TRAVIS_OS_NAME == "osx" ]]; then
+-    echo 'backend : Template' > $MPL_DIR/matplotlibrc
+-fi
+-
+-section "Test.with.min.requirements"
+-pytest $TEST_ARGS skimage
+-section_end "Test.with.min.requirements"
+-
+ section "Flake8.test"
+ flake8 --exit-zero --exclude=test_* skimage doc/examples viewer_examples
+ section_end "Flake8.test"
+ 
+ section "Tests.pytest"
+-# run tests. If running with optional dependencies, report coverage
+-if [[ "$OPTIONAL_DEPS" == "1" ]]; then
+-  export TEST_ARGS="${TEST_ARGS} --cov=skimage"
+-fi
++# Always report coverage as some lines only occure with/without matplotlib
++export TEST_ARGS="${TEST_ARGS} --cov=skimage"
+ # Show what's installed
+ pip list
+ pytest ${TEST_ARGS} skimage
