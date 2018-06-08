@@ -21,8 +21,13 @@ Nightly build status
 
 TODO
   - [x] Get this to build on the CIs
-  - [ ] Get this to pass on all CIs
-  - [ ] Upload this to my own conda channel
+  - [x] Get this to pass on all CIs
+  - [ ] change version number to include the date.
+  - [ ] remove the date from the build number.
+  - [ ] Manually change the travis, circleci and appveyor script to upload to my channel instead of conda-forge
+  - [ ] encrypt my binstar (anaconda) key with [travis](https://docs.travis-ci.com/user/encryption-keys/)
+  - [ ] encrypt the key with [appveyor](https://www.appveyor.com/docs/build-configuration/#secure-variables)
+  - [ ] put the binstar key in circleci's environment [variables](https://circleci.com/docs/2.0/env-vars/#overview)
 
 for now, simply execute:
 ```
