@@ -34,7 +34,7 @@ requirements:
     - cython >=0.23
     - scipy >=0.17
     - numpydoc >=0.6
-    - msinttypes  # [win and py<35]
+    - m2-patch  # [win]
   run:
     - python >=3.5
     - six >=1.7.3
