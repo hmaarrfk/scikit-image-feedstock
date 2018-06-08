@@ -15,14 +15,14 @@ Ideally, these would be uploaded to my own conda channel.
 
 Nightly build status
 ====================
-[![Linux](https://img.shields.io/circleci/project/github/hmaarrfk/scikit-image-feedstock/master.svg?label=Linux)](https://circleci.com/gh/hmaarrfk/scikit-image-feedstock)
-[![OSX](https://img.shields.io/travis/hmaarrfk/scikit-image-feedstock/master.svg?label=macOS)](https://travis-ci.org/hmaarrfk/scikit-image-feedstock)
-[![Windows](https://img.shields.io/appveyor/ci/hmaarrfk/scikit-image-feedstock/master.svg?label=Windows)](https://ci.appveyor.com/project/hmaarrfk/scikit-image-feedstock/branch/master)
+[![Linux](https://circleci.com/gh/hmaarrfk/scikit-image-feedstock.svg?style=svg)](https://circleci.com/gh/hmaarrfk/scikit-image-feedstock)
+[![OSX](https://travis-ci.org/hmaarrfk/scikit-image-feedstock.svg?branch=my_version)](https://travis-ci.org/hmaarrfk/scikit-image-feedstock)
+[![Windows](https://ci.appveyor.com/api/projects/status/71u0c49npsa6467y?svg=true)](https://ci.appveyor.com/project/hmaarrfk/scikit-image-feedstock)
 
 TODO
-  - [] Get this to build on the CIs
-  - [] Get this to pass on all CIs
-  - [] Upload this to my own conda channel
+  - [x] Get this to build on the CIs
+  - [ ] Get this to pass on all CIs
+  - [ ] Upload this to my own conda channel
 
 for now, simply execute:
 ```
