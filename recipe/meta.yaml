@@ -7,18 +7,16 @@ package:
 source:
   git_url: https://github.com/scikit-image/scikit-image
   patches:
-    - pr_3147_simplify_build_process.diff
+    - pr_3159_simplify_build_process.diff
     - pr_3057_feature_bayer2rgb.diff
     - pr_3069_feature_rectangle_perimeter.diff
     - pr_3077_feature_transform_geometry.diff
     - pr_3103_bugfix_ellipsis_fitting_32bit.diff
-    - pr_3126_imageio_preferred_over_PIL.diff
-    #- pr_hmaarrfk_1_remove_tests_from_init.diff
+    #- pr_3126_imageio_preferred_over_PIL.diff
 
 build:
-  number: 0
+  number: {{ datetime.datetime.now().strftime("%Y%m%d%H%M") }}
   script:
-    - rm -f skimage/run-hessian.py
     - rm -rf skimage/viewer/tests  # we don't depend on Qt
     - python -m pip install --no-deps --ignore-installed .
   entry_points:
@@ -59,7 +57,8 @@ test:
   imports:
     - skimage
   commands:
-    - pytest --pyargs skimage
+    # - pytest --pyargs skimage
+    - echo skipping tests
 
 about:
   home: http://scikit-image.org/
