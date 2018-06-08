@@ -28,7 +28,7 @@ requirements:
     - {{ compiler('cxx') }}
     - m2-patch  # [win]
   host:
-    - python >=3.5
+    - python
     - pip
     - conda-forge:numpy 1.11.3
     - cython >=0.23
