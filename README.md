@@ -14,9 +14,9 @@ Summary: Image processing routines for SciPy.
 Current build status
 ====================
 
-[![Linux](https://img.shields.io/circleci/project/github/hmaarrfk/scikit-image-feedstock/master.svg?label=Linux)](https://circleci.com/gh/hmaarrfk/scikit-image-feedstock)
-[![OSX](https://img.shields.io/travis/hmaarrfk/scikit-image-feedstock/master.svg?label=macOS)](https://travis-ci.org/hmaarrfk/scikit-image-feedstock)
-[![Windows](https://img.shields.io/appveyor/ci/hmaarrfk/scikit-image-feedstock/master.svg?label=Windows)](https://ci.appveyor.com/project/hmaarrfk/scikit-image-feedstock/branch/master)
+[![Linux](https://img.shields.io/circleci/project/github/hmaarrfk/scikit-image-feedstock/my_version.svg?label=Linux)](https://circleci.com/gh/hmaarrfk/scikit-image-feedstock)
+[![OSX](https://img.shields.io/travis/hmaarrfk/scikit-image-feedstock/my_version.svg?label=macOS)](https://travis-ci.org/hmaarrfk/scikit-image-feedstock)
+[![Windows](https://img.shields.io/appveyor/ci/hmaarrfk/scikit-image-feedstock/my_version.svg?label=Windows)](https://ci.appveyor.com/project/hmaarrfk/scikit-image-feedstock/branch/my_version)
 
 Current release info
 ====================
