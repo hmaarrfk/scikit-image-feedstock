@@ -53,6 +53,7 @@ install:
       conda config --add channels mark.harfouche
       conda config --set show_channel_urls true
       conda install --yes --quiet conda-forge-ci-setup=1
+      conda install --yes -n root numpy
       source run_conda_forge_build_setup
 
 script:

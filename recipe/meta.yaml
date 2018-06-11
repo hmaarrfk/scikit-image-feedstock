@@ -33,7 +33,6 @@ build:
 requirements:
   build:
     # Needed to get things from versioneer
-    - numpy 1.11.3
     - {{ compiler('c') }}
     - {{ compiler('cxx') }}
     - m2-patch  # [win]

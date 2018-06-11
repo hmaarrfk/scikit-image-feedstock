@@ -46,6 +46,8 @@ install:
 
     # Configure the VM.
     - cmd: conda.exe install -n root --quiet --yes conda-forge-ci-setup=1
+    # Need to install numpy in root to use versioneer
+    - cmd: conda.exe install -n root numpy --yes
     - cmd: run_conda_forge_build_setup
 
 # Skip .NET project specific build phase.

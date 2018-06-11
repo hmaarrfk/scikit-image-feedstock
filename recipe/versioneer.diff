@@ -22,19 +22,19 @@ index 92c9a08c60..18474a6d50 100644
 @@ -41,14 +41,31 @@ make a PR to update these notes after you are done with the release. ;-)
    - Discuss with others, and make the changes directly to v<major>.<minor>.x branch.
    - Once the consensus is found, ask the project maintainers to merge the PR.
- 
+
 -- In the master branch, update the version number in ``skimage/__init__.py``
 -  to the next ``.dev0`` version, commit, and push. This should follow PEP440
 -  meaning that the appropriate version number would look something like
 -  ``0.20.dev0`` with the period beteween ``20`` and ``dev`` and a trailing
--  ``0`` immediately after ``dev``. 
+-  ``0`` immediately after ``dev``.
 +  - In the master branch, create a new tag with an updated version number and
 +    append ``.dev0`` to it. python-versioneer will take care of updating the
 +    version number in the source file. This should follow PEP440
 +    meaning that the appropriate version number would look something like
 +    ``0.20.dev0`` with the period beteween ``20`` and ``dev`` and a trailing
-+    ``0`` immediately after ``dev``. 
- 
++    ``0`` immediately after ``dev``.
+
 -- Back on the release branch, update the version number to stable in
 -  ``skimage/__init__.py``, commit, and push.
 +     git checkout master
@@ -55,32 +55,32 @@ index 92c9a08c60..18474a6d50 100644
 +    #140 and Pull Request #183. We have a modified version of ``_version.py``
 +    that allows a ``fallback_version`` to be specified. Update that to include
 +    ``<new_major>.<new_minor>.0.dev``.
- 
+
  - Update the docs:
- 
+
 @@ -63,10 +80,7 @@ make a PR to update these notes after you are done with the release. ;-)
- 
+
     git tag -s -m <github_release_message> [-u <key-id>] v<major>.<minor>.0
- 
+
 -  (If you do not have a GPG key, follow the tutorial to set it up:
 -   https://help.github.com/articles/signing-commits-with-gpg/)
 -
 -- Push the new tag to GitHub::
 +- Push the new meta-data to github::
- 
+
     git push upstream v<major>.<minor>.0
- 
+
 diff --git a/doc/release/release_dev.rst b/doc/release/release_dev.rst
 index 6581800c98..4d11669b58 100644
 --- a/doc/release/release_dev.rst
 +++ b/doc/release/release_dev.rst
 @@ -24,6 +24,8 @@ Improvements
- 
+
  - ``skivi`` is now using ``qtpy`` for Qt4/Qt5/PySide/PySide2 compatibility (a
    new optional dependency).
 +- Version number is now kept updated by versioneer (vendored).
 +
- 
+
  API Changes
  -----------
 diff --git a/setup.cfg b/setup.cfg
@@ -109,13 +109,13 @@ index 74115d5d60..15a6aa9420 100644
  from distutils.command.build_py import build_py
  from distutils.command.sdist import sdist
 +import versioneer
- 
+
  if sys.version_info < (3, 5):
- 
+
 @@ -50,12 +51,6 @@
  builtins.__SKIMAGE_SETUP__ = True
- 
- 
+
+
 -with open('skimage/__init__.py') as fid:
 -    for line in fid:
 -        if line.startswith('__version__'):
@@ -124,20 +124,20 @@ index 74115d5d60..15a6aa9420 100644
 -
  with open('requirements/default.txt') as fid:
      INSTALL_REQUIRES = [l.strip() for l in fid.readlines() if l]
- 
+
 @@ -128,7 +123,7 @@ def configuration(parent_package='', top_path=None):
          url=URL,
          license=LICENSE,
          download_url=DOWNLOAD_URL,
 -        version=VERSION,
 +        version=versioneer.get_version(),
- 
+
          classifiers=[
              'Development Status :: 4 - Beta',
 @@ -156,7 +151,8 @@ def configuration(parent_package='', top_path=None):
              'console_scripts': ['skivi = skimage.scripts.skivi:main'],
          },
- 
+
 -        cmdclass={'build_py': build_py,
 -                  'sdist': sdist},
 +        cmdclass=versioneer.get_cmdclass(cmdclass={
@@ -152,12 +152,12 @@ index b8d225677d..04fad9d6a2 100644
 @@ -61,8 +61,8 @@
  import warnings
  import sys
- 
+
 -
 -__version__ = '0.15.dev0'
 +from ._version import get_versions as _get_versions
 +__version__ = _get_versions()['version']
- 
+
  from ._shared.version_requirements import ensure_python_version
  ensure_python_version((3, 5))
 diff --git a/skimage/_version.py b/skimage/_version.py
@@ -700,7 +700,7 @@ index f5913d5ff9..3c09616845 100755
 @@ -17,7 +17,7 @@
  data = [l.replace('hard linking ', '') for l in data]
  data = ['./' + l.split(' ->')[0] for l in data]
- 
+
 -ignore_exts = ['.pyc', '.so', '.o', '#', '~', '.gitignore']
 +ignore_exts = ['.pyc', '.so', '.o', '#', '~', '.gitignore', '.gitattributes']
  ignore_dirs = ['./dist', './tools', './doc', './viewer_examples',
@@ -2260,7 +2260,6 @@ index 0000000000..360183e041
 +    # we override different "build_py" commands for both environments
 +    try:
 +        _build_py = cmds["build_py"]
-+        print("Got here")
 +    except KeyError:
 +        if "setuptools" in sys.modules:
 +            from setuptools.command.build_py import build_py as _build_py

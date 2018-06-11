@@ -26,6 +26,8 @@ CONDARC
 conda clean --lock
 
 conda install --yes --quiet conda-forge-ci-setup=1 conda-build
+# Versioneer needs numpy to work for us
+conda install --yes -n root numpy
 source run_conda_forge_build_setup
 
 conda build /home/conda/recipe_root -m /home/conda/feedstock_root/.ci_support/${CONFIG}.yaml --quiet
