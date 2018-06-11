@@ -15,7 +15,7 @@ source:
     #- pr_3126_imageio_preferred_over_PIL.diff
 
 build:
-  number: {{ datetime.datetime.now().strftime("%Y%m%d%H%M") }}
+  number: {{ datetime.datetime.now().strftime("%Y%m%d") }}
   script:
     - rm -rf skimage/viewer/tests  # we don't depend on Qt
     - python -m pip install --no-deps --ignore-installed .
