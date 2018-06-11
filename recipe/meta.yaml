@@ -1,4 +1,4 @@
-{% set version = "0.15.dev0.nightly" %}
+{% set version = "0.15.dev0.nightly0" %}
 
 package:
   name: scikit-image
@@ -15,7 +15,9 @@ source:
     #- pr_3126_imageio_preferred_over_PIL.diff
 
 build:
-  number: {{ datetime.datetime.now().strftime("%Y%m%d") }}
+  # number: {{ datetime.datetime.now().strftime("%Y%m%d") }}
+  number: 1
+  skip: True  # [py<35]
   script:
     - rm -rf skimage/viewer/tests  # we don't depend on Qt
     - python -m pip install --no-deps --ignore-installed .

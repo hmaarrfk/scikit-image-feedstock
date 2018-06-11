@@ -42,6 +42,7 @@ install:
     - cmd: conda.exe config --remove channels defaults
     - cmd: conda.exe config --add channels defaults
     - cmd: conda.exe config --add channels conda-forge
+    - cmd: conda.exe config --add channels mark.harfouche
 
     # Configure the VM.
     - cmd: conda.exe install -n root --quiet --yes conda-forge-ci-setup=1

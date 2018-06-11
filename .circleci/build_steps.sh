@@ -11,6 +11,7 @@ export PYTHONUNBUFFERED=1
 cat >~/.condarc <<CONDARC
 
 channels:
+ - mark.harfouche
  - conda-forge
  - defaults
 
