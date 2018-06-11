@@ -50,6 +50,23 @@ index f04ee7959c..08655f1caf 100644
        fi
      - |
        if [[ "${WITH_PYAMG}" == "1" ]]; then
+diff --git a/INSTALL.rst b/INSTALL.rst
+index dfc800e7a7..a627ad00fa 100644
+--- a/INSTALL.rst
++++ b/INSTALL.rst
+@@ -16,8 +16,10 @@ environment.
+ -------------------------
+ 
+ ``scikit-image`` comes pre-installed with several Python distributions,
+-including Anaconda_, `Enthought Canopy`_, `Python(x,y)`_ and
+-`WinPython`_.
++including `Anaconda <https://www.anaconda.com/download/>`_,
++`Enthought Canopy <https://www.enthought.com/product/canopy/>`_,
++`Python(x,y) <https://python-xy.github.io/>`_ and
++`WinPython <https://winpython.github.io/>`_.
+ 
+ On all other systems, install it via shell/command prompt::
+ 
 diff --git a/requirements/build.txt b/requirements/build.txt
 index b71b135a13..4293b509ba 100644
 --- a/requirements/build.txt
@@ -61,7 +78,7 @@ index b71b135a13..4293b509ba 100644
 +numpydoc>=0.6
 +numpy>=1.11
 diff --git a/requirements/optional.txt b/requirements/optional.txt
-index ad4f25676f..3226882948 100644
+index 6faf5e1f23..320dd4f84e 100644
 --- a/requirements/optional.txt
 +++ b/requirements/optional.txt
 @@ -1,4 +1,3 @@
@@ -97,6 +114,18 @@ index 74115d5d60..6559872dac 100644
      except ImportError:
          if len(sys.argv) >= 2 and ('--help' in sys.argv[1:] or
                                     sys.argv[1] in ('--help-commands',
+diff --git a/skimage/__init__.py b/skimage/__init__.py
+index b8d225677d..66e8291da1 100644
+--- a/skimage/__init__.py
++++ b/skimage/__init__.py
+@@ -82,6 +82,7 @@
+ 
+ 
+ def _raise_build_error(e):
++    import os.path as osp
+     # Raise a comprehensible error
+     local_dir = osp.split(__file__)[0]
+     msg = _STANDARD_MSG
 diff --git a/skimage/io/_plugins/imread_plugin.py b/skimage/io/_plugins/imread_plugin.py
 index 3f63100aea..8a296b7559 100644
 --- a/skimage/io/_plugins/imread_plugin.py
@@ -204,23 +233,25 @@ index ffafe2a711..ac301a295a 100755
  # Show what's installed
  pip list
 diff --git a/tools/travis/script.sh b/tools/travis/script.sh
-index 73ef95a72c..f6c9d328f5 100755
+index 73ef95a72c..356002d8d3 100755
 --- a/tools/travis/script.sh
 +++ b/tools/travis/script.sh
-@@ -1,33 +1,13 @@
+@@ -1,36 +1,24 @@
  #!/usr/bin/env bash
- export PY=${TRAVIS_PYTHON_VERSION}
- 
+-export PY=${TRAVIS_PYTHON_VERSION}
+-
 -# Matplotlib settings - do not show figures during doc examples
 -if [[ $MINIMUM_REQUIREMENTS == 1 || $TRAVIS_OS_NAME == "osx" ]]; then
 -    MPL_DIR=$HOME/.matplotlib
 -else
 -    MPL_DIR=$HOME/.config/matplotlib
 -fi
--
+ 
 -mkdir -p $MPL_DIR
 -touch $MPL_DIR/matplotlibrc
--
++# Enable fast finish on non-zero exit
++set -ex
+ 
 -if [[ $TRAVIS_OS_NAME == "osx" ]]; then
 -    echo 'backend : Template' > $MPL_DIR/matplotlibrc
 -fi
@@ -228,7 +259,13 @@ index 73ef95a72c..f6c9d328f5 100755
 -section "Test.with.min.requirements"
 -pytest $TEST_ARGS skimage
 -section_end "Test.with.min.requirements"
--
++export PY=${TRAVIS_PYTHON_VERSION}
++section "Tests.InstallDependencies"
++pip install --retries 3 -q $PIP_FLAGS -r requirements/test.txt
++# Show what's installed
++pip list
++section_end "Tests.InstallDependencies"
+ 
  section "Flake8.test"
  flake8 --exit-zero --exclude=test_* skimage doc/examples viewer_examples
  section_end "Flake8.test"
@@ -238,8 +275,25 @@ index 73ef95a72c..f6c9d328f5 100755
 -if [[ "$OPTIONAL_DEPS" == "1" ]]; then
 -  export TEST_ARGS="${TEST_ARGS} --cov=skimage"
 -fi
+-# Show what's installed
+-pip list
+-pytest ${TEST_ARGS} skimage
 +# Always report coverage as some lines only occure with/without matplotlib
 +export TEST_ARGS="${TEST_ARGS} --cov=skimage"
- # Show what's installed
- pip list
- pytest ${TEST_ARGS} skimage
++# `pip install .` doesn't let you do an "in-tree" test
++(cd .. && pytest ${TEST_ARGS} --pyargs skimage)
+ section_end "Tests.pytest"
+ 
+ 
+@@ -54,10 +42,8 @@ elif [[ "${TEST_EXAMPLES}" != "0" ]]; then
+   echo 'backend : Template' > $MPL_DIR/matplotlibrc
+   for f in doc/examples/*/*.py; do
+     python "${f}"
+-    if [ $? -ne 0 ]; then
+-      exit 1
+-    fi
+   done
+   mv $MPL_DIR/matplotlibrc_backup $MPL_DIR/matplotlibrc
+ fi
+ section_end "Tests.examples"
++
