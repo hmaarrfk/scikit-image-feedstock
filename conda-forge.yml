@@ -3,6 +3,10 @@ channels:
   targets:
     - [mark.harfouche, main]
 
+github:
+  user_or_org: hmaarrfk
+
+
 travis:
   secure:
     BINSTAR_TOKEN: mp/WiLws3pvOQwwE74/eU4fqeLMd+KUr8K7/syyO+E+Vr+sqfJ7A9t9I54O+IMNXcQnI6+KOkHT2fDx7w5UT4ryKEJrmCA5gjjuFzlHzBo4DIXDjMCgwT2n4YZI2kHebvM4WDqrtAWTKiGBYr7Pls0BdvdkqTEVV2e++eQsf3R40A4P0a+DbGmizemtwB52gQF1QY9VIhiy0EBQNLjuwyzMYrcgEviZ/zMUmp/7hTDRHjOUCq0sUjTPktzSU1L4SgTOdPzZ27F7ADTPK3wZtnWge0xmpMso5VnJro+klj1l2at0VHOyNesS7WRcFWgH0SM8740hSwkVAISLpunegHgu+PJJLCisyeTvGg5DgOufHVL48Wwxdl9I+kspzQtI7XsmxCEYThUWNOvtg6MTKcpjQZP2r+StMImks4Jkp/J6bVgW3XlNYW5SF0IlOCeQB2QghxtQ7MHDwCi7r2tG9+phBBn8KvioPLGCZpwGcPsBTeHMhrAPET6gOfymmcvbnq75esGk45hn4LBqzpmIYhNz9FTsQyNt0zunAj7q89LjnGWo1VVQIQnK1pAlrF/MbOsQcKFJQT+Mhp4/E6VDKP2/w/eY/nptd5qkDMp1sb9q8a9tqTA/53TpRLoU0zSMUjNYENw+3tkl6EwIcfE26qWv2Xc4WH5SEfx8loaKWrHU=
