@@ -57,4 +57,4 @@ install:
 script:
   - conda build ./recipe -m ./.ci_support/${CONFIG}.yaml
 
-  - upload_or_check_non_existence ./recipe markharfouche --channel=main -m ./.ci_support/${CONFIG}.yaml
+  - upload_or_check_non_existence ./recipe mark.harfouche --channel=main -m ./.ci_support/${CONFIG}.yaml
