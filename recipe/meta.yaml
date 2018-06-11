@@ -30,7 +30,7 @@ requirements:
   host:
     - python
     - pip
-    - conda-forge:numpy 1.11.3
+    - numpy 1.11.3
     - cython >=0.23
     - scipy >=0.17
     - numpydoc >=0.6
