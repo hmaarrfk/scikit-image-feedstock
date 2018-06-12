@@ -13,7 +13,6 @@ source:
   git_url: https://github.com/hmaarrfk/scikit-image
   patches:
     - versioneer.diff
-    - pr_3159_simplify_build_process.diff
     - pr_3057_feature_bayer2rgb.diff
     - pr_3069_feature_rectangle_perimeter.diff
     - pr_3077_feature_transform_geometry.diff

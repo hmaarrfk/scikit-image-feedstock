@@ -1,6 +1,5 @@
 #!/bin/bash
 
-curl -L https://github.com/scikit-image/scikit-image/pull/3159.diff > recipe/pr_3159_simplify_build_process.diff
 curl -L https://github.com/scikit-image/scikit-image/pull/3126.diff > recipe/pr_3126_imageio_preferred_over_PIL.diff
 curl -L https://github.com/scikit-image/scikit-image/pull/3103.diff > recipe/pr_3103_bugfix_ellipsis_fitting_32bit.diff
 curl -L https://github.com/scikit-image/scikit-image/pull/3077.diff > recipe/pr_3077_feature_transform_geometry.diff
