@@ -16,73 +16,51 @@ index 6e7080b19f..cf08ddea58 100644
 +include versioneer.py
 +include skimage/_version.py
 diff --git a/RELEASE.txt b/RELEASE.txt
-index 92c9a08c60..18474a6d50 100644
+index 92c9a08c60..6f3a9dc789 100644
 --- a/RELEASE.txt
 +++ b/RELEASE.txt
-@@ -41,14 +41,31 @@ make a PR to update these notes after you are done with the release. ;-)
-   - Discuss with others, and make the changes directly to v<major>.<minor>.x branch.
-   - Once the consensus is found, ask the project maintainers to merge the PR.
+@@ -50,6 +50,12 @@ make a PR to update these notes after you are done with the release. ;-)
+ - Back on the release branch, update the version number to stable in
+   ``skimage/__init__.py``, commit, and push.
  
--- In the master branch, update the version number in ``skimage/__init__.py``
--  to the next ``.dev0`` version, commit, and push. This should follow PEP440
--  meaning that the appropriate version number would look something like
--  ``0.20.dev0`` with the period beteween ``20`` and ``dev`` and a trailing
--  ``0`` immediately after ``dev``. 
-+  - In the master branch, create a new tag with an updated version number and
-+    append ``.dev0`` to it. python-versioneer will take care of updating the
-+    version number in the source file. This should follow PEP440
-+    meaning that the appropriate version number would look something like
-+    ``0.20.dev0`` with the period beteween ``20`` and ``dev`` and a trailing
-+    ``0`` immediately after ``dev``. 
- 
--- Back on the release branch, update the version number to stable in
--  ``skimage/__init__.py``, commit, and push.
-+     git checkout master
-+     git tag -s [-u <key-id>] v<new_major>.<new_minor>.0.dev
-+
-+    (If you do not have a gpg key, use -m instead; it is important for
-+    Debian packaging that the tags are annotated)
-+
-+  - Push the new meta-data to github::
-+
-+     git push --tags upstream master
-+
-+    (where ``upstream`` is the name of the
-+     ``github.com:scikit-image/scikit-image`` repository.)
-+
 +  - From the homepage, git allows users to download a zip that won't contain
 +    enough information for versioneer to work correctly. See their issue
 +    #140 and Pull Request #183. We have a modified version of ``_version.py``
 +    that allows a ``fallback_version`` to be specified. Update that to include
 +    ``<new_major>.<new_minor>.0.dev``.
- 
++
  - Update the docs:
  
-@@ -63,10 +80,7 @@ make a PR to update these notes after you are done with the release. ;-)
+   - Edit ``doc/source/_static/docversions.js`` and commit
+diff --git a/doc/tools/build_modref_templates.py b/doc/tools/build_modref_templates.py
+index 2d9592524a..40a223908f 100644
+--- a/doc/tools/build_modref_templates.py
++++ b/doc/tools/build_modref_templates.py
+@@ -37,15 +37,15 @@ def abort(error):
  
-    git tag -s -m <github_release_message> [-u <key-id>] v<major>.<minor>.0
+     installed_version = V(module.__version__)
  
--  (If you do not have a GPG key, follow the tutorial to set it up:
--   https://help.github.com/articles/signing-commits-with-gpg/)
+-    source_lines = open('../skimage/__init__.py').readlines()
+-    version = 'vUndefined'
+-    for l in source_lines:
+-        if l.startswith('__version__'):
+-            source_version = V(l.split("'")[1])
+-            break
 -
--- Push the new tag to GitHub::
-+- Push the new meta-data to github::
- 
-    git push upstream v<major>.<minor>.0
- 
-diff --git a/doc/release/release_dev.rst b/doc/release/release_dev.rst
-index 6581800c98..4d11669b58 100644
---- a/doc/release/release_dev.rst
-+++ b/doc/release/release_dev.rst
-@@ -24,6 +24,8 @@ Improvements
- 
- - ``skivi`` is now using ``qtpy`` for Qt4/Qt5/PySide/PySide2 compatibility (a
-   new optional dependency).
-+- Version number is now kept updated by versioneer (vendored).
+-    if source_version != installed_version:
+-        abort("Installed version does not match source version")
++    # source_lines = open('../skimage/__init__.py').readlines()
++    # version = 'vUndefined'
++    # for l in source_lines:
++        # if l.startswith('__version__'):
++            # source_version = V(l.split("'")[1])
++            # break
 +
++    # if source_version != installed_version:
++    #    abort("Installed version does not match source version")
  
- API Changes
- -----------
+     outdir = 'source/api'
+     docwriter = ApiDocWriter(package)
 diff --git a/setup.cfg b/setup.cfg
 new file mode 100644
 index 0000000000..07caa76da8
@@ -146,17 +124,18 @@ index 74115d5d60..15a6aa9420 100644
          **extra
      )
 diff --git a/skimage/__init__.py b/skimage/__init__.py
-index b8d225677d..04fad9d6a2 100644
+index 0bd2eba0a8..d49ccd893c 100644
 --- a/skimage/__init__.py
 +++ b/skimage/__init__.py
-@@ -61,8 +61,8 @@
+@@ -61,8 +61,9 @@
  import warnings
  import sys
  
 -
 -__version__ = '0.15.dev0'
-+from ._version import get_versions as _get_versions
-+__version__ = _get_versions()['version']
++from ._version import get_versions
++__version__ = get_versions()['version']
++del get_versions
  
  from ._shared.version_requirements import ensure_python_version
  ensure_python_version((3, 5))
@@ -694,17 +673,18 @@ index 0000000000..e5133e48c9
 +            "dirty": None,
 +            "error": "unable to compute version", "date": None}
 diff --git a/tools/check_sdist.py b/tools/check_sdist.py
-index f5913d5ff9..3c09616845 100755
+index 3632a311cf..33496f4057 100755
 --- a/tools/check_sdist.py
 +++ b/tools/check_sdist.py
-@@ -17,7 +17,7 @@
+@@ -17,7 +17,8 @@
  data = [l.replace('hard linking ', '') for l in data]
  data = ['./' + l.split(' ->')[0] for l in data]
  
--ignore_exts = ['.pyc', '.so', '.o', '#', '~', '.gitignore']
-+ignore_exts = ['.pyc', '.so', '.o', '#', '~', '.gitignore', '.gitattributes']
+-ignore_exts = ['.pyc', '.so', '.o', '#', '~', '.gitignore', '.o.d']
++ignore_exts = ['.pyc', '.so', '.o', '#', '~', '.gitignore', '.o.d',
++               '.gitattributes']
  ignore_dirs = ['./dist', './tools', './doc', './viewer_examples',
-                './downloads', './scikit_image.egg-info']
+                './downloads', './scikit_image.egg-info', './benchmarks']
  ignore_files = ['./TODO.md', './README.md', './MANIFEST',
 diff --git a/versioneer.py b/versioneer.py
 new file mode 100644

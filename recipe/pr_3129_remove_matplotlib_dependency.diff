@@ -1,19 +1,65 @@
 diff --git a/.travis.yml b/.travis.yml
-index f04ee7959c..a243c809f8 100644
+index 3eb0e5191b..53491f9349 100644
 --- a/.travis.yml
 +++ b/.travis.yml
-@@ -39,9 +39,10 @@ matrix:
+@@ -38,25 +38,35 @@ matrix:
+   include:
      - os: linux
        python: 3.5
-       env: OPTIONAL_DEPS=1 WITH_PYSIDE=1 BUILD_DOCS=1
+-      env: OPTIONAL_DEPS=1 WITH_PYSIDE=1 BUILD_DOCS=1
++      env: BUILD_DOCS=1
 +      # Need matplotlib to test examples, and now it has been removed as a dependency
      - os: linux
        python: 3.5
--      env: QT=PyQt5 WITH_PYAMG=1 MINIMUM_REQUIREMENTS=1
-+      env: QT=PyQt5 WITH_PYAMG=1 MINIMUM_REQUIREMENTS=1 TEST_EXAMPLES=0
+       env: QT=PyQt5 WITH_PYAMG=1 MINIMUM_REQUIREMENTS=1
      - os: linux
        python: 3.6
-       env: QT=PyQt5 WITH_PYAMG=1 OPTIONAL_DEPS=1 BUILD_DOCS=1 DEPLOY_DOCS=1
+-      env: QT=PyQt5 WITH_PYAMG=1 OPTIONAL_DEPS=1 BUILD_DOCS=1 DEPLOY_DOCS=1
++      env: QT=PyQt5 WITH_PYAMG=1 BUILD_DOCS=1 DEPLOY_DOCS=1
+     - os: linux
+       python: 3.6
+-      env: QT=PyQt5 WITH_PYAMG=1 OPTIONAL_DEPS=1 PIP_FLAGS="--pre"
++      env: QT=PyQt5 WITH_PYAMG=1 PIP_FLAGS="--pre"
+     - os: osx
+       osx_image: xcode9
+       language: objective-c
+       # OS X has a hard time installing the docs dependencies
+       env: TRAVIS_PYTHON_VERSION=3.5
++    - os: osx
++      osx_image: xcode9
++      language: objective-c
++      # OS X has a hard time installing the docs dependencies
++      env: TRAVIS_PYTHON_VERSION=3.6
+ 
+ before_install:
++    # libpng 1.6.32 has a bug in reading PNG
++    # that seems to be the default library that is installed
++    # https://github.com/ImageMagick/ImageMagick/issues/747#issuecomment-328521685
+     - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+         source tools/travis/osx_install.sh;
++        brew upgrade libpng;
+       else
+         virtualenv -p python ~/venv;
+         source ~/venv/bin/activate;
+@@ -79,18 +89,10 @@ install:
+       else
+         export MPL_DIR=${HOME}/.config/matplotlib
+       fi
+-    - mkdir -p ${MPL_DIR}
+-    - touch ${MPL_DIR}/matplotlibrc
+-    # Install most of the optional packages
+-    - |
+-      if [[ "${OPTIONAL_DEPS}" == "1" ]]; then
+-        pip install --retries 3 -q -r ./requirements/optional.txt $WHEELHOUSE
+-      fi
+     - |
+       if [[ "${WITH_PYAMG}" == "1" ]]; then
+         pip install --retries 3 -q pyamg
+       fi
+-    - tools/travis/install_qt.sh
+ 
+ script: tools/travis/script.sh
+ 
 diff --git a/doc/examples/edges/plot_skeleton.py b/doc/examples/edges/plot_skeleton.py
 index 9a3bc703fe..7978624b4f 100644
 --- a/doc/examples/edges/plot_skeleton.py
@@ -36,6 +82,29 @@ index 9a3bc703fe..7978624b4f 100644
  ax[1].contour(data, [0.5], colors='w')
  ax[1].set_title('medial_axis')
  ax[1].axis('off')
+diff --git a/requirements/README.md b/requirements/README.md
+index 2824a9365c..baa9e37938 100644
+--- a/requirements/README.md
++++ b/requirements/README.md
+@@ -5,13 +5,15 @@
+ - [default.txt](default.txt)
+   Default requirements
+ - [docs.txt](docs.txt)
+-  Documentation requirements
++  Documentation requirements that do not otherwise add any features to
++  scikit-image
+ - [optional.txt](optional.txt)
+-  Optional requirements
++  Optional requirements that can add features to scikit-image
+ - [test.txt](test.txt)
+   Requirements for running test suite
+ - [build.txt](build.txt)
+-  Requirements for building from the source repository
++  Requirements for building from the source repository and associated build
++  tools
+ 
+ ## Examples
+ 
 diff --git a/requirements/default.txt b/requirements/default.txt
 index 2735b203b9..c52591327a 100644
 --- a/requirements/default.txt
@@ -47,23 +116,14 @@ index 2735b203b9..c52591327a 100644
  networkx>=2.0
  pillow>=4.3.0
  PyWavelets>=0.4.0
-diff --git a/requirements/docs.txt b/requirements/docs.txt
-index 7d66dc63c6..e50895bcd8 100644
---- a/requirements/docs.txt
-+++ b/requirements/docs.txt
-@@ -2,3 +2,4 @@ sphinx>=1.3
- numpydoc
- sphinx-gallery
- scikit-learn
-+matplotlib>=2.0.0
 diff --git a/requirements/optional.txt b/requirements/optional.txt
-index ad4f25676f..87e6af439b 100644
+index 6faf5e1f23..4f99508b95 100644
 --- a/requirements/optional.txt
 +++ b/requirements/optional.txt
-@@ -4,3 +4,4 @@ SimpleITK
- astropy
+@@ -5,3 +5,4 @@ astropy
  tifffile
  imageio
+ qtpy
 +matplotlib>=2.0.0
 diff --git a/skimage/_shared/testing.py b/skimage/_shared/testing.py
 index db31662d6e..3ec6fee00f 100644
@@ -138,6 +198,28 @@ index 6ec786b05f..7973b8db8f 100644
  def test_polygon_perimeter_outside_image():
      rr, cc = polygon_perimeter([-1, -1, 3,  3],
                                 [-1,  4, 4, -1], shape=(3, 4))
+diff --git a/skimage/filters/tests/test_thresholding.py b/skimage/filters/tests/test_thresholding.py
+index d5935c71bb..b2029a25c5 100644
+--- a/skimage/filters/tests/test_thresholding.py
++++ b/skimage/filters/tests/test_thresholding.py
+@@ -19,6 +19,8 @@
+                                           _mean_std)
+ from skimage._shared import testing
+ from skimage._shared.testing import assert_equal, assert_almost_equal
++from skimage._shared.version_requirements import is_installed
++from skimage._shared import testing
+ 
+ 
+ class TestSimpleImage():
+@@ -33,6 +35,8 @@ def test_minimum(self):
+         with pytest.raises(RuntimeError):
+             threshold_minimum(self.image)
+ 
++    @testing.skipif(not is_installed('matplotlib'),
++                    reason='try_all returns a matplotlib figure.')
+     def test_try_all_threshold(self):
+         fig, ax = try_all_threshold(self.image)
+         all_texts = [axis.texts for axis in ax if axis.texts != []]
 diff --git a/skimage/future/manual_segmentation.py b/skimage/future/manual_segmentation.py
 index 84402cf04d..14cc0d9db3 100644
 --- a/skimage/future/manual_segmentation.py
@@ -181,6 +263,34 @@ index 84402cf04d..14cc0d9db3 100644
      list_of_vertex_lists = []
      polygons_drawn = []
  
+diff --git a/skimage/io/_plugins/matplotlib_plugin.py b/skimage/io/_plugins/matplotlib_plugin.py
+index 361fc4e5c4..3ddf0086f3 100644
+--- a/skimage/io/_plugins/matplotlib_plugin.py
++++ b/skimage/io/_plugins/matplotlib_plugin.py
+@@ -4,13 +4,12 @@
+ from mpl_toolkits.axes_grid1 import make_axes_locatable
+ from ...util import dtype as dtypes
+ from ...exposure import is_low_contrast
+-from ...util.colormap import viridis
+ from ..._shared.utils import warn
+ from math import floor, ceil
+ 
+ 
+ _default_colormap = 'gray'
+-_nonstandard_colormap = viridis
++_nonstandard_colormap = 'viridis'
+ _diverging_colormap = 'RdBu'
+ 
+ 
+@@ -146,8 +145,6 @@ def imshow(image, ax=None, show_cbar=None, **kwargs):
+     ax_im : `matplotlib.pyplot.AxesImage`
+         The `AxesImage` object returned by `plt.imshow`.
+     """
+-    if kwargs.get('cmap', None) == 'viridis':
+-        kwargs['cmap'] = viridis
+     lo, hi, cmap = _get_display_range(image)
+ 
+     kwargs.setdefault('interpolation', 'nearest')
 diff --git a/skimage/io/tests/test_mpl_imshow.py b/skimage/io/tests/test_mpl_imshow.py
 index b97f10ca40..f772a5e70f 100644
 --- a/skimage/io/tests/test_mpl_imshow.py
@@ -817,7 +927,7 @@ index f4b4c8ec62..101118e947 100644
 +    __all__ = []
 +    warn('Viewer requires matplotlib.')
 diff --git a/skimage/viewer/canvastools/painttool.py b/skimage/viewer/canvastools/painttool.py
-index 45305b2d86..bd297635bf 100644
+index aab4828ca7..14ae111ea4 100644
 --- a/skimage/viewer/canvastools/painttool.py
 +++ b/skimage/viewer/canvastools/painttool.py
 @@ -47,7 +47,7 @@ class PaintTool(CanvasToolBase):
@@ -830,13 +940,10 @@ index 45305b2d86..bd297635bf 100644
      >>> p = PaintTool(ax,np.shape(img[:-1]),10,0.2) #doctest: +SKIP
      >>> plt.show() #doctest: +SKIP
 diff --git a/skimage/viewer/tests/test_plugins.py b/skimage/viewer/tests/test_plugins.py
-index 34a148d3c4..20dc6e641b 100644
+index fe93ef64fd..20dc6e641b 100644
 --- a/skimage/viewer/tests/test_plugins.py
 +++ b/skimage/viewer/tests/test_plugins.py
-@@ -1,9 +1,16 @@
--# -*- coding: utf-8 -*-
- import numpy as np
- import skimage
+@@ -3,6 +3,14 @@
  import skimage.data as data
  from skimage.filters.rank import median
  from skimage.morphology import disk
@@ -851,7 +958,7 @@ index 34a148d3c4..20dc6e641b 100644
  from skimage.viewer import ImageViewer, has_qt
  from skimage.viewer.plugins.base import Plugin
  from skimage.viewer.widgets import Slider
-@@ -11,11 +18,6 @@
+@@ -10,11 +18,6 @@
      LineProfile, Measure, CannyPlugin, LabelPainter, Crop, ColorHistogram,
      PlotPlugin)
  
@@ -887,11 +994,10 @@ index fc772ee43e..4a59043e6d 100644
  try:
      from matplotlib.testing.decorators import cleanup
 diff --git a/skimage/viewer/tests/test_utils.py b/skimage/viewer/tests/test_utils.py
-index ff134e64e5..bed7acec80 100644
+index a6f5d63e7e..bed7acec80 100644
 --- a/skimage/viewer/tests/test_utils.py
 +++ b/skimage/viewer/tests/test_utils.py
-@@ -1,4 +1,6 @@
--# -*- coding: utf-8 -*-
+@@ -1,3 +1,6 @@
 +from skimage._shared import testing
 +matplotlib = testing.importorskip('matplotlib')
 +
@@ -940,54 +1046,36 @@ index 5d49fb453f..a5fd567508 100644
  
  def get_image_viewer():
      image = data.coins()
-diff --git a/tools/build_versions.py b/tools/build_versions.py
-index 681e5d2168..778d3cf996 100755
---- a/tools/build_versions.py
-+++ b/tools/build_versions.py
-@@ -2,13 +2,12 @@
- 
- import numpy as np
- import scipy as sp
--import matplotlib as mpl
- from PIL import Image
- import Cython
- import networkx
- 
- 
--for m in (np, sp, mpl, Image, networkx, Cython):
-+for m in (np, sp, Image, networkx, Cython):
-     if m is Image:
-         version = m.VERSION
-     else:
 diff --git a/tools/travis/before_install.sh b/tools/travis/before_install.sh
-index ffafe2a711..0e2e254f54 100755
+index 3d6f4474ae..a6a60e3808 100755
 --- a/tools/travis/before_install.sh
 +++ b/tools/travis/before_install.sh
-@@ -27,9 +27,15 @@ fi
- export WHEELHOUSE
- 
+@@ -29,7 +29,6 @@ export WHEELHOUSE
  export DISPLAY=:99.0
--export PYTHONWARNINGS="d,all:::skimage"
--export TEST_ARGS="-v --doctest-modules"
--WHEELBINARIES="matplotlib scipy pillow cython"
-+# export PYTHONWARNINGS="d,all:::skimage"
-+if [[ "$OPTIONAL_DEPS" != "0" ]]; then
-+    # doctests probably need matplotlib. It just isn't worth poluting them
-+    # by wrapping them in code that makes us skip the tests
-+    export TEST_ARGS="-v --cov=skimage --doctest-modules"
-+else
-+    export TEST_ARGS="-v --cov=skimage"
-+fi
-+WHEELBINARIES="scipy pillow cython"
+ # This causes way too many internal warnings within python.
+ # export PYTHONWARNINGS="d,all:::skimage"
+-export TEST_ARGS="--doctest-modules"
  
  retry () {
      # https://gist.github.com/fungusakafungus/1026804
+@@ -58,7 +57,7 @@ python -m pip install --upgrade pip
+ pip install --retries 3 -q wheel
+ 
+ # install specific wheels from wheelhouse
+-for requirement in matplotlib scipy pillow; do
++for requirement in scipy pillow; do
+     WHEELS="$WHEELS $(grep $requirement requirements/default.txt)"
+ done
+ # cython is not in the default.txt requirements
 diff --git a/tools/travis/script.sh b/tools/travis/script.sh
-index 73ef95a72c..08c0c7bafb 100755
+index 7684caee44..9fce1e351c 100755
 --- a/tools/travis/script.sh
 +++ b/tools/travis/script.sh
-@@ -1,33 +1,13 @@
+@@ -1,57 +1,53 @@
  #!/usr/bin/env bash
+ # Fail on non-zero exit and echo the commands
+-set -ev
++set -ex
  export PY=${TRAVIS_PYTHON_VERSION}
  
 -# Matplotlib settings - do not show figures during doc examples
@@ -1012,17 +1100,37 @@ index 73ef95a72c..08c0c7bafb 100755
  flake8 --exit-zero --exclude=test_* skimage doc/examples viewer_examples
  section_end "Flake8.test"
  
- section "Tests.pytest"
+-section "Tests.pytest"
 -# run tests. If running with optional dependencies, report coverage
 -if [[ "$OPTIONAL_DEPS" == "1" ]]; then
 -  export TEST_ARGS="${TEST_ARGS} --cov=skimage"
 -fi
-+export TEST_ARGS="${TEST_ARGS} "
-+
++section "Tests.pytest.minimal"
  # Show what's installed
  pip list
- pytest ${TEST_ARGS} skimage
-@@ -37,19 +17,19 @@ section_end "Tests.pytest"
+-pytest ${TEST_ARGS} skimage
+-section_end "Tests.pytest"
++pytest skimage
++section_end "Tests.pytest.minimal"
++
++# Install optional dependencies and pyqt
++section "Install.optional.dependencies"
++mkdir -p ${MPL_DIR}
++touch ${MPL_DIR}/matplotlibrc
++# matplotlib is one optional dependency that definitely needs to be installed
++# from the wheelhouse if we plan on testing linux 32 bit
++pip install --retries 3 -q -r ./requirements/optional.txt $WHEELHOUSE
++
++tools/travis/install_qt.sh
++section_end "Install.optional.dependencies"
+ 
++section "Tests.pytest.with_optional"
++# Show what's installed
++pip list
++pytest --doctest-modules --cov=skimage skimage
++section_end "Tests.pytest.with_optional"
+ 
++if [[ "${MINIMUM_REQUIREMENTS}" != "1" ]]; then
  section "Tests.examples"
  # Run example applications
  echo Build or run examples
@@ -1040,7 +1148,7 @@ index 73ef95a72c..08c0c7bafb 100755
 +
 +if [[ "${BUILD_DOCS}" == "1" ]]; then
    export SPHINXCACHE=${HOME}/.cache/sphinx; make html
- elif [[ "${TEST_EXAMPLES}" != "0" ]]; then
+-elif [[ "${TEST_EXAMPLES}" != "0" ]]; then
 -  # OSX Can't install sphinx-gallery.
 -  # I think all it needs is scikit-learn from that requirements doc
 -  # to run the tests. See Issue #3084
@@ -1049,6 +1157,16 @@ index 73ef95a72c..08c0c7bafb 100755
 -  else
 -    pip install --retries 3 -q -r ./requirements/docs.txt
 -  fi
++else
++  # These test are run by sphinx automatically
    cp $MPL_DIR/matplotlibrc $MPL_DIR/matplotlibrc_backup
    echo 'backend : Template' > $MPL_DIR/matplotlibrc
    for f in doc/examples/*/*.py; do
+@@ -63,5 +59,6 @@ elif [[ "${TEST_EXAMPLES}" != "0" ]]; then
+   mv $MPL_DIR/matplotlibrc_backup $MPL_DIR/matplotlibrc
+ fi
+ section_end "Tests.examples"
++fi
+ 
+-set +ev
++set +ex

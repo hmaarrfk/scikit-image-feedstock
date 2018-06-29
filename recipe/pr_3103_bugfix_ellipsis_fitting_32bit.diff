@@ -1,12 +1,13 @@
 diff --git a/skimage/measure/fit.py b/skimage/measure/fit.py
-index 90f749e3d2..294586e0c3 100644
+index 0dde3b373d..4f8ab51c96 100644
 --- a/skimage/measure/fit.py
 +++ b/skimage/measure/fit.py
-@@ -434,6 +434,10 @@ def estimate(self, data):
+@@ -434,6 +434,11 @@ def estimate(self, data):
          except np.linalg.LinAlgError:  # LinAlgError: Singular matrix
              return False
  
 +        # Compute the condition number of M before taking an inverse
++        # While C1 may be well posed, M might not be
 +        if np.linalg.cond(M) > 1 / np.finfo(np.double).eps:
 +            return False
 +
