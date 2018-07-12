@@ -17,6 +17,7 @@ source:
     - pr_3069_feature_rectangle_perimeter.diff
     - pr_3077_feature_transform_geometry.diff
     - pr_3103_bugfix_ellipsis_fitting_32bit.diff
+    - pr_3253_warping_dtypes.diff
     #- pr_3126_imageio_preferred_over_PIL.diff
 
 build:

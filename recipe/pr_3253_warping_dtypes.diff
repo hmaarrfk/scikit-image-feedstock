@@ -1,0 +1,844 @@
+diff --git a/skimage/_shared/fused_numerics.pxd b/skimage/_shared/fused_numerics.pxd
+new file mode 100644
+index 0000000000..30cd06b5d9
+--- /dev/null
++++ b/skimage/_shared/fused_numerics.pxd
+@@ -0,0 +1,34 @@
++cimport numpy as cnp
++import numpy as np
++
++ctypedef fused np_ints:
++    cnp.int8_t
++    cnp.int16_t
++    cnp.int32_t
++    cnp.int64_t
++
++ctypedef fused np_uints:
++    cnp.uint8_t
++    cnp.uint16_t
++    cnp.uint32_t
++    cnp.uint64_t
++
++ctypedef fused np_anyint:
++    np_uints
++    np_ints
++
++ctypedef fused np_floats:
++    cnp.float32_t
++    cnp.float64_t
++
++ctypedef fused np_complexes:
++    cnp.complex64_t
++    cnp.complex128_t
++
++ctypedef fused np_real_numeric:
++    np_anyint
++    np_floats
++
++ctypedef fused np_numeric:
++    np_real_numeric
++    np_complexes
+diff --git a/skimage/_shared/interpolation.pxd b/skimage/_shared/interpolation.pxd
+index 8991af3eee..7da321c19e 100644
+--- a/skimage/_shared/interpolation.pxd
++++ b/skimage/_shared/interpolation.pxd
+@@ -18,66 +18,73 @@ by 4 values on each side:
+ """
+ from libc.math cimport ceil, floor
+ 
++import numpy as np
++cimport numpy as np
++from .fused_numerics cimport np_real_numeric, np_floats
+ 
+-cdef inline Py_ssize_t round(double r) nogil:
++
++cdef inline Py_ssize_t round(np_floats r) nogil:
+     return <Py_ssize_t>((r + 0.5) if (r > 0.0) else (r - 0.5))
+ 
++ctypedef fused np_real_numeric_out:
++    np_real_numeric
+ 
+-cdef inline double nearest_neighbour_interpolation(double* image,
+-                                                   Py_ssize_t rows,
+-                                                   Py_ssize_t cols, double r,
+-                                                   double c, char mode,
+-                                                   double cval) nogil:
++cdef inline void nearest_neighbour_interpolation(
++    np_real_numeric* image, Py_ssize_t rows, Py_ssize_t cols,
++    np_floats r, np_floats c, char mode, np_real_numeric cval,
++    np_real_numeric_out* out) nogil:
+     """Nearest neighbour interpolation at a given position in the image.
+ 
+     Parameters
+     ----------
+-    image : double array
++    image : numeric array
+         Input image.
+     rows, cols : int
+         Shape of image.
+-    r, c : double
++    r, c : np_float
+         Position at which to interpolate.
+     mode : {'C', 'W', 'S', 'E', 'R'}
+         Wrapping mode. Constant, Wrap, Symmetric, Edge or Reflect.
+-    cval : double
++    cval : numeric
+         Constant value to use for constant mode.
+ 
+     Returns
+     -------
+-    value : double
++    value : np_float
+         Interpolated value.
+ 
+     """
+ 
+-    return get_pixel2d(image, rows, cols, round(r), round(c), mode, cval)
++    out[0] = <np_real_numeric_out>get_pixel2d(
++        image, rows, cols, round(r), round(c), mode, cval)
+ 
+ 
+-cdef inline double bilinear_interpolation(double* image, Py_ssize_t rows,
+-                                          Py_ssize_t cols, double r, double c,
+-                                          char mode, double cval) nogil:
++cdef inline void bilinear_interpolation(
++    np_real_numeric* image, Py_ssize_t rows, Py_ssize_t cols,
++    np_floats r, np_floats c, char mode, np_real_numeric cval,
++    np_real_numeric_out out[0]) nogil:
+     """Bilinear interpolation at a given position in the image.
+ 
+     Parameters
+     ----------
+-    image : double array
++    image : numeric array
+         Input image.
+     rows, cols : int
+         Shape of image.
+-    r, c : double
++    r, c : np_float
+         Position at which to interpolate.
+     mode : {'C', 'W', 'S', 'E', 'R'}
+         Wrapping mode. Constant, Wrap, Symmetric, Edge or Reflect.
+-    cval : double
++    cval : numeric
+         Constant value to use for constant mode.
+ 
+     Returns
+     -------
+-    value : double
++    value : numeric
+         Interpolated value.
+ 
+     """
+-    cdef double dr, dc
++    cdef np_floats dr, dc
+     cdef long minr, minc, maxr, maxc
+ 
+     minr = <long>floor(r)
+@@ -86,30 +93,36 @@ cdef inline double bilinear_interpolation(double* image, Py_ssize_t rows,
+     maxc = <long>ceil(c)
+     dr = r - minr
+     dc = c - minc
+-    top = (1 - dc) * get_pixel2d(image, rows, cols, minr, minc, mode, cval) \
+-          + dc * get_pixel2d(image, rows, cols, minr, maxc, mode, cval)
+-    bottom = (1 - dc) * get_pixel2d(image, rows, cols, maxr, minc, mode,
+-                                    cval) \
+-             + dc * get_pixel2d(image, rows, cols, maxr, maxc, mode, cval)
+-    return (1 - dr) * top + dr * bottom
+ 
++    cdef np.float64_t top
++    cdef np.float64_t bottom
++
++    cdef np_real_numeric top_left = get_pixel2d(image, rows, cols, minr, minc, mode, cval)
++    cdef np_real_numeric top_right = get_pixel2d(image, rows, cols, minr, maxc, mode, cval)
++    cdef np_real_numeric bottom_left = get_pixel2d(image, rows, cols, maxr, minc, mode, cval)
++    cdef np_real_numeric bottom_right = get_pixel2d(image, rows, cols, maxr, maxc, mode, cval)
+ 
+-cdef inline double quadratic_interpolation(double x, double[3] f) nogil:
++    top = (1 - dc) * top_left + dc * top_right
++    bottom = (1 - dc) * bottom_left + dc * bottom_right
++    out[0] = <np_real_numeric_out> ((1 - dr) * top + dr * bottom)
++
++cdef inline np_floats quadratic_interpolation(np_floats x,
++                                              np_real_numeric[3] f) nogil:
+     """WARNING: Do not use, not implemented correctly.
+ 
+     Quadratic interpolation.
+ 
+     Parameters
+     ----------
+-    x : double
++    x : np_float
+         Position in the interval [0, 2].
+-    f : double[3]
++    f : real numeric[3]
+         Function values at positions [0, 2].
+ 
+     Returns
+     -------
+-    value : double
+-        Interpolated value.
++    value : np_float
++        Interpolated value to be used in biquadratic_interpolation.
+ 
+     """
+     return (x * f[2] * (x - 1)) / 2 - \
+@@ -117,30 +130,30 @@ cdef inline double quadratic_interpolation(double x, double[3] f) nogil:
+                     (f[0] * (x - 1) * (x - 2)) / 2
+ 
+ 
+-cdef inline double biquadratic_interpolation(double* image, Py_ssize_t rows,
+-                                             Py_ssize_t cols, double r,
+-                                             double c, char mode,
+-                                             double cval) nogil:
++cdef inline void biquadratic_interpolation(
++    np_real_numeric* image, Py_ssize_t rows, Py_ssize_t cols,
++    np_floats r, np_floats c, char mode, np_real_numeric cval,
++    np_real_numeric_out* out) nogil:
+     """WARNING: Do not use, not implemented correctly.
+ 
+     Biquadratic interpolation at a given position in the image.
+ 
+     Parameters
+     ----------
+-    image : double array
++    image : numeric array
+         Input image.
+     rows, cols : int
+         Shape of image.
+-    r, c : double
++    r, c : np_float
+         Position at which to interpolate.
+     mode : {'C', 'W', 'S', 'E', 'R'}
+         Wrapping mode. Constant, Wrap, Symmetric, Edge or Reflect.
+-    cval : double
++    cval : numeric
+         Constant value to use for constant mode.
+ 
+     Returns
+     -------
+-    value : double
++    out : np_real_numeric
+         Interpolated value.
+ 
+     """
+@@ -148,11 +161,11 @@ cdef inline double biquadratic_interpolation(double* image, Py_ssize_t rows,
+     cdef long r0 = <long>round(r) - 1
+     cdef long c0 = <long>round(c) - 1
+ 
+-    cdef double xr = r - r0
+-    cdef double xc = c - c0
++    cdef np_floats xr = r - r0
++    cdef np_floats xc = c - c0
+ 
+-    cdef double fc[3]
+-    cdef double fr[3]
++    cdef np_real_numeric fc[3]
++    cdef np_floats fr[3]
+ 
+     cdef long pr, pc
+ 
+@@ -163,36 +176,37 @@ cdef inline double biquadratic_interpolation(double* image, Py_ssize_t rows,
+                                  r0 + pr, c0 + pc, mode, cval)
+         fr[pr] = quadratic_interpolation(xc, fc)
+ 
+-    # cubic interpolation for interpolated values of each row
+-    return quadratic_interpolation(xr, fr)
++    out[0] = <np_real_numeric_out>quadratic_interpolation(xr, fr)
+ 
+ 
+-cdef inline double cubic_interpolation(double x, double[4] f) nogil:
++cdef inline np_floats cubic_interpolation(np_floats x, np_real_numeric[4] f) nogil:
+     """Cubic interpolation.
+ 
+     Parameters
+     ----------
+-    x : double
++    x : np_float
+         Position in the interval [0, 1].
+-    f : double[4]
++    f : real numeric[4]
+         Function values at positions [-1, 0, 1, 2].
+ 
+     Returns
+     -------
+-    value : double
+-        Interpolated value.
++    value : np_float
++        Interpolated value to be used in bicubic_interpolation.
+ 
+     """
+-    return \
++    return (\
+         f[1] + 0.5 * x * \
+             (f[2] - f[0] + x * \
+                 (2.0 * f[0] - 5.0 * f[1] + 4.0 * f[2] - f[3] + x * \
+-                    (3.0 * (f[1] - f[2]) + f[3] - f[0])))
++                    (3.0 * (f[1] - f[2]) + f[3] - f[0]))))
+ 
+ 
+-cdef inline double bicubic_interpolation(double* image, Py_ssize_t rows,
+-                                         Py_ssize_t cols, double r, double c,
+-                                         char mode, double cval) nogil:
++cdef inline void bicubic_interpolation(np_real_numeric* image,
++                                             Py_ssize_t rows, Py_ssize_t cols,
++                                             np_floats r, np_floats c, char mode,
++                                             np_real_numeric cval,
++                                             np_real_numeric_out* out) nogil:
+     """Bicubic interpolation at a given position in the image.
+ 
+     Interpolation using Catmull-Rom splines, based on the bicubic convolution
+@@ -200,20 +214,20 @@ cdef inline double bicubic_interpolation(double* image, Py_ssize_t rows,
+ 
+     Parameters
+     ----------
+-    image : double array
++    image : numeric array
+         Input image.
+     rows, cols : int
+         Shape of image.
+-    r, c : double
++    r, c : np_float
+         Position at which to interpolate.
+     mode : {'C', 'W', 'S', 'E', 'R'}
+         Wrapping mode. Constant, Wrap, Symmetric, Edge or Reflect.
+-    cval : double
++    cval : numeric
+         Constant value to use for constant mode.
+ 
+     Returns
+     -------
+-    value : double
++    out : np_real_numeric
+         Interpolated value.
+ 
+     References
+@@ -228,15 +242,14 @@ cdef inline double bicubic_interpolation(double* image, Py_ssize_t rows,
+     cdef long c0 = <long>floor(c)
+ 
+     # scale position to range [0, 1]
+-    cdef double xr = r - r0
+-    cdef double xc = c - c0
++    cdef np_floats xr = r - r0
++    cdef np_floats xc = c - c0
+ 
+     r0 -= 1
+     c0 -= 1
+ 
+-    cdef double fc[4]
+-    cdef double fr[4]
+-
++    cdef np_real_numeric fc[4]
++    cdef np_floats fr[4]
+     cdef long pr, pc
+ 
+     # row-wise cubic interpolation
+@@ -245,18 +258,17 @@ cdef inline double bicubic_interpolation(double* image, Py_ssize_t rows,
+             fc[pc] = get_pixel2d(image, rows, cols, pr + r0, pc + c0, mode, cval)
+         fr[pr] = cubic_interpolation(xc, fc)
+ 
+-    # cubic interpolation for interpolated values of each row
+-    return cubic_interpolation(xr, fr)
+-
++    out[0] = <np_real_numeric_out>cubic_interpolation(xr, fr)
+ 
+-cdef inline double get_pixel2d(double* image, Py_ssize_t rows, Py_ssize_t cols,
+-                               long r, long c, char mode,
+-                               double cval) nogil:
++cdef inline np_real_numeric get_pixel2d(np_real_numeric* image,
++                                        Py_ssize_t rows, Py_ssize_t cols,
++                                        long r, long c, char mode,
++                                        np_real_numeric cval) nogil:
+     """Get a pixel from the image, taking wrapping mode into consideration.
+ 
+     Parameters
+     ----------
+-    image : double array
++    image : numeric array
+         Input image.
+     rows, cols : int
+         Shape of image.
+@@ -264,12 +276,12 @@ cdef inline double get_pixel2d(double* image, Py_ssize_t rows, Py_ssize_t cols,
+         Position at which to get the pixel.
+     mode : {'C', 'W', 'S', 'E', 'R'}
+         Wrapping mode. Constant, Wrap, Symmetric, Edge or Reflect.
+-    cval : double
++    cval : numeric
+         Constant value to use for constant mode.
+ 
+     Returns
+     -------
+-    value : double
++    value : numeric
+         Pixel value at given position.
+ 
+     """
+@@ -279,17 +291,20 @@ cdef inline double get_pixel2d(double* image, Py_ssize_t rows, Py_ssize_t cols,
+         else:
+             return image[r * cols + c]
+     else:
+-        return image[coord_map(rows, r, mode) * cols + coord_map(cols, c, mode)]
++        return <np_real_numeric>(image[coord_map(rows, r, mode) * cols +
++                                       coord_map(cols, c, mode)])
+ 
+ 
+-cdef inline double get_pixel3d(double* image, Py_ssize_t rows, Py_ssize_t cols,
+-                               Py_ssize_t dims, long r, long c,
+-                               long d, char mode, double cval) nogil:
++cdef inline np_real_numeric get_pixel3d(np_real_numeric* image,
++                                        Py_ssize_t rows, Py_ssize_t cols,
++                                        Py_ssize_t dims, long r, long c,
++                                        long d, char mode,
++                                        np_real_numeric cval) nogil:
+     """Get a pixel from the image, taking wrapping mode into consideration.
+ 
+     Parameters
+     ----------
+-    image : double array
++    image : numeric array
+         Input image.
+     rows, cols, dims : int
+         Shape of image.
+@@ -297,12 +312,12 @@ cdef inline double get_pixel3d(double* image, Py_ssize_t rows, Py_ssize_t cols,
+         Position at which to get the pixel.
+     mode : {'C', 'W', 'S', 'E', 'R'}
+         Wrapping mode. Constant, Wrap, Symmetric, Edge or Reflect.
+-    cval : double
++    cval : numeric
+         Constant value to use for constant mode.
+ 
+     Returns
+     -------
+-    value : double
++    out : np_real_numeric
+         Pixel value at given position.
+ 
+     """
+@@ -312,9 +327,9 @@ cdef inline double get_pixel3d(double* image, Py_ssize_t rows, Py_ssize_t cols,
+         else:
+             return image[r * cols * dims + c * dims + d]
+     else:
+-        return image[coord_map(rows, r, mode) * cols * dims
+-                     + coord_map(cols, c, mode) * dims
+-                     + coord_map(dims, d, mode)]
++        return image[coord_map(rows, r, mode) * cols * dims +
++                     coord_map(cols, c, mode) * dims +
++                     coord_map(dims, d, mode)]
+ 
+ 
+ cdef inline Py_ssize_t coord_map(Py_ssize_t dim, long coord, char mode) nogil:
+diff --git a/skimage/feature/_texture.pyx b/skimage/feature/_texture.pyx
+index d9d6b15040..6cbe3261cc 100644
+--- a/skimage/feature/_texture.pyx
++++ b/skimage/feature/_texture.pyx
+@@ -12,15 +12,8 @@ import cython
+ cdef extern from "numpy/npy_math.h":
+     double NAN "NPY_NAN"
+ 
+-ctypedef fused any_int:
+-    cnp.uint8_t
+-    cnp.uint16_t
+-    cnp.uint32_t
+-    cnp.uint64_t
+-    cnp.int8_t
+-    cnp.int16_t
+-    cnp.int32_t
+-    cnp.int64_t
++from .._shared.fused_numerics cimport np_anyint as any_int
++from .._shared.fused_numerics cimport np_real_numeric
+ 
+ 
+ def _glcm_loop(any_int[:, ::1] image, double[:] distances,
+@@ -92,7 +85,7 @@ cdef inline int _bit_rotate_right(int value, int length) nogil:
+     return (value >> 1) | ((value & 1) << (length - 1))
+ 
+ 
+-def _local_binary_pattern(double[:, ::1] image,
++def _local_binary_pattern(cnp.float64_t[:, ::1] image,
+                           int P, float R, char method='D'):
+     """Gray scale and rotation invariant LBP (Local Binary Patterns).
+ 
+@@ -148,14 +141,15 @@ def _local_binary_pattern(double[:, ::1] image,
+ 
+     # To compute the variance features
+     cdef double sum_, var_, texture_i
++    cdef cnp.float64_t zero = 0
+ 
+     with nogil:
+         for r in range(image.shape[0]):
+             for c in range(image.shape[1]):
+                 for i in range(P):
+-                    texture[i] = bilinear_interpolation(&image[0, 0], rows, cols,
+-                                                        r + rp[i], c + cp[i],
+-                                                        'C', 0)
++                    bilinear_interpolation[cnp.float64_t, double, double](
++                        &image[0, 0], rows, cols, r + rp[i], c + cp[i], 'C', 0,
++                        &texture[i])
+                 # signed / thresholded texture
+                 for i in range(P):
+                     if texture[i] - image[r, c] >= 0:
+diff --git a/skimage/transform/_warps.py b/skimage/transform/_warps.py
+index 2eea251352..dddb208ad3 100644
+--- a/skimage/transform/_warps.py
++++ b/skimage/transform/_warps.py
+@@ -655,8 +655,38 @@ def _clip_warp_output(input_image, output_image, order, mode, cval, clip):
+             output_image[cval_mask] = cval
+ 
+ 
++def warp_fast(image, H, output_shape=None,
++              order=1, mode='constant', cval=0, dtype=np.float64):
++    """Projective transformation (homography).
++
++    This is a Python wrapper for the Cython function ``_warp_fast``.
++    It prepares the data and allocates the necessary memory.
++
++    Parameters
++    ----------
++    output_shape : tuple (rows, cols), optional
++        Shape of the output image generated (default None).
++    dtype :
++        The numric type of the output image.
++
++    others:
++        See ``_warp_fast``
++    """
++    image = np.ascontiguousarray(image)
++    H = np.ascontiguousarray(H, dtype=np.float64)
++
++    if output_shape is None:
++        out = np.empty_like(image, dtype=dtype)
++    else:
++        out = np.empty(shape=output_shape[:2], dtype=dtype)
++
++    _warp_fast(image, H, out, order=order, mode=mode, cval=cval)
++    return out
++
++
+ def warp(image, inverse_map, map_args={}, output_shape=None, order=1,
+-         mode='constant', cval=0., clip=True, preserve_range=False):
++         mode='constant', cval=0., clip=True, preserve_range=False,
++         dtype=np.float64):
+     """Warp an image according to a given coordinate transformation.
+ 
+     Parameters
+@@ -725,6 +755,9 @@ def warp(image, inverse_map, map_args={}, output_shape=None, order=1,
+         Also see
+         http://scikit-image.org/docs/dev/user_guide/data_types.html
+ 
++    dtype : optional
++        Numpy dtype for the output image.
++
+     Returns
+     -------
+     warped : double ndarray
+@@ -794,7 +827,9 @@ def warp(image, inverse_map, map_args={}, output_shape=None, order=1,
+     >>> warped = warp(cube, coords)
+ 
+     """
+-    image = convert_to_float(image, preserve_range)
++
++    if not preserve_range:
++        image = convert_to_float(image, preserve_range)
+ 
+     input_shape = np.array(image.shape)
+ 
+@@ -838,15 +873,18 @@ def warp(image, inverse_map, map_args={}, output_shape=None, order=1,
+         if matrix is not None:
+             matrix = matrix.astype(np.double)
+             if image.ndim == 2:
+-                warped = _warp_fast(image, matrix,
+-                                    output_shape=output_shape,
+-                                    order=order, mode=mode, cval=cval)
++                warped = warp_fast(image, matrix,
++                                   output_shape=output_shape,
++                                   order=order, mode=mode, cval=cval,
++                                   dtype=dtype)
+             elif image.ndim == 3:
+                 dims = []
+                 for dim in range(image.shape[2]):
+-                    dims.append(_warp_fast(image[..., dim], matrix,
+-                                           output_shape=output_shape,
+-                                           order=order, mode=mode, cval=cval))
++                    dims.append(warp_fast(image[..., dim], matrix,
++                                          output_shape=output_shape,
++                                          order=order, mode=mode,
++                                          cval=cval,
++                                          dtype=dtype))
+                 warped = np.dstack(dims)
+ 
+     if warped is None:
+diff --git a/skimage/transform/_warps_cy.pyx b/skimage/transform/_warps_cy.pyx
+index 3d4428dd62..60eeb0b29e 100644
+--- a/skimage/transform/_warps_cy.pyx
++++ b/skimage/transform/_warps_cy.pyx
+@@ -9,18 +9,19 @@ from .._shared.interpolation cimport (nearest_neighbour_interpolation,
+                                       biquadratic_interpolation,
+                                       bicubic_interpolation)
+ 
++from .._shared.fused_numerics cimport np_real_numeric, np_floats
+ 
+-cdef inline void _transform_metric(double x, double y, double* H,
+-                                   double *x_, double *y_) nogil:
++cdef inline void _transform_metric(np_floats x, np_floats y, np_floats* H,
++                                   np_floats *x_, np_floats *y_) nogil:
+     """Apply a metric transformation to a coordinate.
+ 
+     Parameters
+     ----------
+-    x, y : double
++    x, y : np_float
+         Input coordinate.
+-    H : (3,3) *double
++    H : (3,3) *np_float
+         Transformation matrix.
+-    x_, y_ : *double
++    x_, y_ : *np_float
+         Output coordinate.
+ 
+     """
+@@ -28,17 +29,17 @@ cdef inline void _transform_metric(double x, double y, double* H,
+     y_[0] = H[4] * y + H[5]
+ 
+ 
+-cdef inline void _transform_affine(double x, double y, double* H,
+-                                   double *x_, double *y_) nogil:
++cdef inline void _transform_affine(np_floats x, np_floats y, np_floats* H,
++                                   np_floats *x_, np_floats *y_) nogil:
+     """Apply an affine transformation to a coordinate.
+ 
+     Parameters
+     ----------
+-    x, y : double
++    x, y : np_float
+         Input coordinate.
+-    H : (3,3) *double
++    H : (3,3) *np_floats
+         Transformation matrix.
+-    x_, y_ : *double
++    x_, y_ : *np_float
+         Output coordinate.
+ 
+     """
+@@ -46,28 +47,32 @@ cdef inline void _transform_affine(double x, double y, double* H,
+     y_[0] = H[3] * x + H[4] * y + H[5]
+ 
+ 
+-cdef inline void _transform_projective(double x, double y, double* H,
+-                                       double *x_, double *y_) nogil:
++cdef inline void _transform_projective(np_floats x, np_floats y, np_floats* H,
++                                       np_floats *x_, np_floats *y_) nogil:
+     """Apply a homography to a coordinate.
+ 
+     Parameters
+     ----------
+-    x, y : double
++    x, y : np_float
+         Input coordinate.
+-    H : (3,3) *double
++    H : (3,3) *np_floats
+         Transformation matrix.
+-    x_, y_ : *double
++    x_, y_ : *np_float
+         Output coordinate.
+ 
+     """
+-    cdef double z_
++    cdef np_floats z_
+     z_ = H[6] * x + H[7] * y + H[8]
+     x_[0] = (H[0] * x + H[1] * y + H[2]) / z_
+     y_[0] = (H[3] * x + H[4] * y + H[5]) / z_
+ 
+ 
+-def _warp_fast(cnp.ndarray image, cnp.ndarray H, output_shape=None,
+-               int order=1, mode='constant', double cval=0):
++ctypedef fused np_real_numeric_out:
++    np_real_numeric
++
++def _warp_fast(np_real_numeric[:, ::1] image, np_floats[:, ::1] H,
++               np_real_numeric_out[:, ::1] out,
++               int order=1, mode='constant', np_real_numeric cval=0):
+     """Projective transformation (homography).
+ 
+     Perform a projective transformation (homography) of a
+@@ -90,12 +95,13 @@ def _warp_fast(cnp.ndarray image, cnp.ndarray H, output_shape=None,
+ 
+     Parameters
+     ----------
+-    image : 2-D array
++    image : 2-D numeric array
+         Input image.
+     H : array of shape ``(3, 3)``
+         Transformation matrix H that defines the homography.
+-    output_shape : tuple (rows, cols), optional
+-        Shape of the output image generated (default None).
++    out : tuple (rows, cols), optional
++        Output array for the transform. The resulting image is static cast to
++        the type of the array.
+     order : {0, 1, 2, 3}, optional
+         Order of interpolation::
+         * 0: Nearest-neighbor
+@@ -105,9 +111,10 @@ def _warp_fast(cnp.ndarray image, cnp.ndarray H, output_shape=None,
+     mode : {'constant', 'edge', 'symmetric', 'reflect', 'wrap'}, optional
+         Points outside the boundaries of the input are filled according
+         to the given mode.  Modes match the behaviour of `numpy.pad`.
+-    cval : string, optional (default 0)
++    cval : numeric, optional (default 0)
+         Used in conjunction with mode 'C' (constant), the value
+-        outside the image boundaries.
++        outside the image boundaries. The numeric type should match
++        the image's numeric type.
+ 
+     Notes
+     -----
+@@ -118,41 +125,34 @@ def _warp_fast(cnp.ndarray image, cnp.ndarray H, output_shape=None,
+     would be [0, 1, 2, 1, 0, 1, 2].
+ 
+     """
+-
+-    cdef double[:, ::1] img = np.ascontiguousarray(image, dtype=np.double)
+-    cdef double[:, ::1] M = np.ascontiguousarray(H)
+-
+     if mode not in ('constant', 'wrap', 'symmetric', 'reflect', 'edge'):
+         raise ValueError("Invalid mode specified.  Please use `constant`, "
+                          "`edge`, `wrap`, `reflect` or `symmetric`.")
+     cdef char mode_c = ord(mode[0].upper())
+ 
+-    cdef Py_ssize_t out_r, out_c
+-    if output_shape is None:
+-        out_r = int(img.shape[0])
+-        out_c = int(img.shape[1])
+-    else:
+-        out_r = int(output_shape[0])
+-        out_c = int(output_shape[1])
+-
+-    cdef double[:, ::1] out = np.zeros((out_r, out_c), dtype=np.double)
++    cdef Py_ssize_t out_r = out.shape[0]
++    cdef Py_ssize_t out_c = out.shape[1]
+ 
+     cdef Py_ssize_t tfr, tfc
+-    cdef double r, c
+-    cdef Py_ssize_t rows = img.shape[0]
+-    cdef Py_ssize_t cols = img.shape[1]
++    cdef np_floats r, c
++    cdef Py_ssize_t rows = image.shape[0]
++    cdef Py_ssize_t cols = image.shape[1]
+ 
+-    cdef void (*transform_func)(double, double, double*, double*, double*) nogil
+-    if M[2, 0] == 0 and M[2, 1] == 0 and M[2, 2] == 1:
+-        if M[0, 1] == 0 and M[1, 0] == 0:
++    cdef void (*transform_func)(np_floats, np_floats, np_floats*, np_floats*, np_floats*) nogil
++    if H[2, 0] == 0 and H[2, 1] == 0 and H[2, 2] == 1:
++        if H[0, 1] == 0 and H[1, 0] == 0:
+             transform_func = _transform_metric
+         else:
+             transform_func = _transform_affine
+     else:
+         transform_func = _transform_projective
+ 
+-    cdef double (*interp_func)(double*, Py_ssize_t, Py_ssize_t, double, double,
+-                               char, double) nogil
++    cdef void (*interp_func)(np_real_numeric*,
++                             Py_ssize_t, Py_ssize_t,
++                             np_floats, np_floats,
++                             char, np_real_numeric,
++                             np_real_numeric_out*) nogil
++
+     if order == 0:
+         interp_func = nearest_neighbour_interpolation
+     elif order == 1:
+@@ -167,8 +167,6 @@ def _warp_fast(cnp.ndarray image, cnp.ndarray H, output_shape=None,
+     with nogil:
+         for tfr in range(out_r):
+             for tfc in range(out_c):
+-                transform_func(tfc, tfr, &M[0, 0], &c, &r)
+-                out[tfr, tfc] = interp_func(&img[0, 0], rows, cols, r, c,
+-                                            mode_c, cval)
+-
+-    return np.asarray(out)
++                transform_func(tfc, tfr, &H[0, 0], &c, &r)
++                interp_func(&image[0, 0], rows, cols, r, c,
++                            mode_c, cval, &out[tfr, tfc])
+diff --git a/skimage/transform/radon_transform.py b/skimage/transform/radon_transform.py
+index f828077a1a..94e75ad91b 100644
+--- a/skimage/transform/radon_transform.py
++++ b/skimage/transform/radon_transform.py
+@@ -1,7 +1,7 @@
+ import numpy as np
+ from scipy.fftpack import fft, ifft, fftfreq
+ from scipy.interpolate import interp1d
+-from ._warps_cy import _warp_fast
++from ._warps import warp_fast
+ from ._radon_transform import sart_projection_update
+ from warnings import warn
+ 
+@@ -102,7 +102,7 @@ def build_rotation(theta):
+         return shift1.dot(R).dot(shift0)
+ 
+     for i in range(len(theta)):
+-        rotated = _warp_fast(padded_image, build_rotation(theta[i]))
++        rotated = warp_fast(padded_image, build_rotation(theta[i]))
+         radon_image[:, i] = rotated.sum(0)
+     return radon_image
+ 
+diff --git a/skimage/transform/tests/test_warps.py b/skimage/transform/tests/test_warps.py
+index 1f110c8874..78b66b118c 100644
+--- a/skimage/transform/tests/test_warps.py
++++ b/skimage/transform/tests/test_warps.py
+@@ -12,7 +12,7 @@
+ 
+ from skimage._shared import testing
+ from skimage._shared.testing import (assert_almost_equal, assert_equal,
+-                                     test_parallel)
++                                     test_parallel, parametrize)
+ from skimage._shared._warnings import expected_warnings
+ 
+ 
+@@ -491,3 +491,48 @@ def test_keep_range():
+                   clip=True, order=0)
+     assert out.min() == 0
+     assert out.max() == 2 / 255.0
++
++
++@parametrize("dtype_in", [np.uint8, np.uint16, np.uint32, np.uint64,
++                          np.int8, np.int16, np.int32, np.int64,
++                          np.float32, np.float64])
++def test_default_dtype_out(dtype_in):
++    image = np.zeros((5, 5), dtype=dtype_in)
++    image[0, 0] = 1
++    theta = -np.pi / 2
++    M = np.array([[np.cos(theta), - np.sin(theta), 0],
++                  [np.sin(theta),   np.cos(theta), 4],
++                  [0,               0,             1]])
++
++    x90 = warp(image,
++               inverse_map=ProjectiveTransform(M).inverse,
++               order=1,
++               preserve_range=True)
++    assert x90.dtype == np.dtype(np.double)
++    assert_almost_equal(x90, np.rot90(image))
++
++
++# biquadratic interpolation (order=2) is buggy and falls back on the scipy
++# implementation. just skip it for this tests.
++@parametrize("order", (0, 1, 3))
++@parametrize("dtype_in", [np.uint8, np.uint16, np.uint32, np.uint64,
++                          np.int8, np.int16, np.int32, np.int64,
++                          np.float32, np.float64])
++@parametrize("dtype_out", [np.uint8, np.uint16, np.uint32, np.uint64,
++                           np.int8, np.int16, np.int32, np.int64,
++                           np.float32, np.float64])
++def test_force_dtype(dtype_in, dtype_out, order):
++    image = np.zeros((5, 5), dtype=dtype_in)
++    image[0, 0] = 1
++    theta = -np.pi / 2
++    M = np.array([[np.cos(theta), - np.sin(theta), 0],
++                  [np.sin(theta),   np.cos(theta), 4],
++                  [0,               0,             1]])
++
++    x90 = warp(image,
++               inverse_map=ProjectiveTransform(M).inverse,
++               order=order,
++               preserve_range=True,
++               dtype=dtype_out)
++    assert x90.dtype == np.dtype(dtype_out)
++    assert_almost_equal(x90, np.rot90(image).astype(dtype_out))

@@ -1,38 +1,38 @@
 diff --git a/doc/release/release_dev.rst b/doc/release/release_dev.rst
-index 12a1793289..dae830a66c 100644
+index 8eff1062ac..a33ee25f1a 100644
 --- a/doc/release/release_dev.rst
 +++ b/doc/release/release_dev.rst
-@@ -26,6 +26,8 @@ Improvements
+@@ -35,6 +35,8 @@ Improvements
  
  API Changes
  -----------
 +- imageio is now the preferred plugin for reading and writing images.
 +- imageio is now a dependency of scikit-image.
  
- 
- 
+ - ``colorconv.separate_stains`` and ``colorconv.combine_stains`` now uses
+   base10 instead of the natural logarithm as discussed in issue #2995.
 diff --git a/requirements/default.txt b/requirements/default.txt
-index 2735b203b9..a8f7fb9eba 100644
+index 2735b203b9..e2416eac34 100644
 --- a/requirements/default.txt
 +++ b/requirements/default.txt
-@@ -2,7 +2,7 @@ numpy>=1.11
- scipy>=0.17.0
+@@ -3,6 +3,7 @@ scipy>=0.17.0
  matplotlib>=2.0.0
  networkx>=2.0
--pillow>=4.3.0
+ pillow>=4.3.0
 +imageio>=2.0.1
  PyWavelets>=0.4.0
  dask[array]>=0.9.0
  cloudpickle>=0.2.1
 diff --git a/requirements/optional.txt b/requirements/optional.txt
-index ad4f25676f..fe5fab99e9 100644
+index 6faf5e1f23..65c1983bf7 100644
 --- a/requirements/optional.txt
 +++ b/requirements/optional.txt
-@@ -3,4 +3,3 @@ imread
+@@ -3,5 +3,4 @@ imread
  SimpleITK
  astropy
  tifffile
 -imageio
+ qtpy
 diff --git a/skimage/io/_io.py b/skimage/io/_io.py
 index 33520137b0..0534d7723f 100644
 --- a/skimage/io/_io.py

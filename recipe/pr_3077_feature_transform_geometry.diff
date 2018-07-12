@@ -11,7 +11,7 @@ index d05986ca88..c3d0f11307 100644
  ax.axis((0, out_cols, out_rows, 0))
  plt.show()
 diff --git a/skimage/transform/_geometric.py b/skimage/transform/_geometric.py
-index c41836bf65..eada9cde6c 100644
+index c41836bf65..05cbc6eb8c 100644
 --- a/skimage/transform/_geometric.py
 +++ b/skimage/transform/_geometric.py
 @@ -3,7 +3,7 @@
@@ -148,7 +148,7 @@ index c41836bf65..eada9cde6c 100644
      def estimate(self, src, dst):
          """Estimate the transformation from a set of corresponding points.
  
-@@ -690,22 +671,27 @@ def estimate(self, src, dst):
+@@ -690,22 +671,28 @@ def estimate(self, src, dst):
  
          return True
  
@@ -169,7 +169,8 @@ index c41836bf65..eada9cde6c 100644
 -                and other.__name__ == 'inverse'
 -                and hasattr(get_bound_method_class(other), '_inv_matrix')):
 -            return ProjectiveTransform(other.__self__._inv_matrix @ self.params)
-+            return tform(matrix=self.params @ other.params)
++            # 2.7 compatibility
++            return tform(matrix=self.params.dot(other.params))
 +        else:
 +            raise TypeError("Cannot combine transformations of differing "
 +                            "types.")
@@ -183,11 +184,11 @@ index c41836bf65..eada9cde6c 100644
 +             "``@`` compared to ``+``.",
 +             UserWarning)
 +        if isinstance(other, ProjectiveTransform):
-+            return other @ self
++            return other.__matmul__(self)
          else:
              raise TypeError("Cannot combine transformations of differing "
                              "types.")
-@@ -732,7 +718,8 @@ class AffineTransform(ProjectiveTransform):
+@@ -732,7 +719,8 @@ class AffineTransform(ProjectiveTransform):
      Parameters
      ----------
      matrix : (3, 3) array, optional
@@ -197,7 +198,7 @@ index c41836bf65..eada9cde6c 100644
      scale : (sx, sy) as array, list or tuple, optional
          Scale factors.
      rotation : float, optional
-@@ -751,28 +738,13 @@ class AffineTransform(ProjectiveTransform):
+@@ -751,28 +739,13 @@ class AffineTransform(ProjectiveTransform):
  
      _coeffs = range(6)
  
@@ -230,7 +231,7 @@ index c41836bf65..eada9cde6c 100644
              sx, sy = scale
              self.params = np.array([
                  [sx * math.cos(rotation), -sy * math.sin(rotation + shear), 0],
-@@ -780,9 +752,6 @@ def __init__(self, matrix=None, scale=None, rotation=None, shear=None,
+@@ -780,9 +753,6 @@ def __init__(self, matrix=None, scale=None, rotation=None, shear=None,
                  [                      0,                                0, 1]
              ])
              self.params[0:2, 2] = translation
@@ -240,7 +241,7 @@ index c41836bf65..eada9cde6c 100644
  
      @property
      def scale(self):
-@@ -902,7 +871,15 @@ def __call__(self, coords):
+@@ -902,7 +872,15 @@ def __call__(self, coords):
  
          return out
  
@@ -257,7 +258,7 @@ index c41836bf65..eada9cde6c 100644
          """Apply inverse transformation.
  
          Coordinates outside of the mesh will be set to `- 1`.
-@@ -951,9 +928,9 @@ class EuclideanTransform(ProjectiveTransform):
+@@ -951,9 +929,9 @@ class EuclideanTransform(ProjectiveTransform):
  
      where the homogeneous transformation matrix is::
  
@@ -270,7 +271,7 @@ index c41836bf65..eada9cde6c 100644
  
      The Euclidean transformation is a rigid transformation with rotation and
      translation parameters. The similarity transformation extends the Euclidean
-@@ -962,7 +939,8 @@ class EuclideanTransform(ProjectiveTransform):
+@@ -962,7 +940,8 @@ class EuclideanTransform(ProjectiveTransform):
      Parameters
      ----------
      matrix : (3, 3) array, optional
@@ -280,7 +281,7 @@ index c41836bf65..eada9cde6c 100644
      rotation : float, optional
          Rotation angle in counter-clockwise direction as radians.
      translation : (tx, ty) as array, list or tuple, optional
-@@ -975,18 +953,12 @@ class EuclideanTransform(ProjectiveTransform):
+@@ -975,18 +954,12 @@ class EuclideanTransform(ProjectiveTransform):
  
      """
  
@@ -302,7 +303,7 @@ index c41836bf65..eada9cde6c 100644
              if rotation is None:
                  rotation = 0
              if translation is None:
-@@ -998,9 +970,6 @@ def __init__(self, matrix=None, rotation=None, translation=None):
+@@ -998,9 +971,6 @@ def __init__(self, matrix=None, rotation=None, translation=None):
                  [                 0,                    0, 1]
              ])
              self.params[0:2, 2] = translation
@@ -312,7 +313,7 @@ index c41836bf65..eada9cde6c 100644
  
      def estimate(self, src, dst):
          """Estimate the transformation from a set of corresponding points.
-@@ -1050,9 +1019,9 @@ class SimilarityTransform(EuclideanTransform):
+@@ -1050,9 +1020,9 @@ class SimilarityTransform(EuclideanTransform):
  
      where ``s`` is a scale factor and the homogeneous transformation matrix is::
  
@@ -325,7 +326,7 @@ index c41836bf65..eada9cde6c 100644
  
      The similarity transformation extends the Euclidean transformation with a
      single scaling factor in addition to the rotation and translation
-@@ -1061,7 +1030,8 @@ class SimilarityTransform(EuclideanTransform):
+@@ -1061,7 +1031,8 @@ class SimilarityTransform(EuclideanTransform):
      Parameters
      ----------
      matrix : (3, 3) array, optional
@@ -335,7 +336,7 @@ index c41836bf65..eada9cde6c 100644
      scale : float, optional
          Scale factor.
      rotation : float, optional
-@@ -1076,26 +1046,13 @@ class SimilarityTransform(EuclideanTransform):
+@@ -1076,26 +1047,13 @@ class SimilarityTransform(EuclideanTransform):
  
      """
  
@@ -366,7 +367,7 @@ index c41836bf65..eada9cde6c 100644
              self.params = np.array([
                  [math.cos(rotation), - math.sin(rotation), 0],
                  [math.sin(rotation),   math.cos(rotation), 0],
-@@ -1103,9 +1060,7 @@ def __init__(self, matrix=None, scale=None, rotation=None,
+@@ -1103,9 +1061,7 @@ def __init__(self, matrix=None, scale=None, rotation=None,
              ])
              self.params[0:2, 0:2] *= scale
              self.params[0:2, 2] = translation
@@ -377,7 +378,7 @@ index c41836bf65..eada9cde6c 100644
  
      def estimate(self, src, dst):
          """Estimate the transformation from a set of corresponding points.
-@@ -1283,7 +1238,8 @@ def __call__(self, coords):
+@@ -1283,7 +1239,8 @@ def __call__(self, coords):
  
          return dst
  
@@ -388,29 +389,31 @@ index c41836bf65..eada9cde6c 100644
              'There is no explicit way to do the inverse polynomial '
              'transformation. Instead, estimate the inverse transformation '
 diff --git a/skimage/transform/_warps.py b/skimage/transform/_warps.py
-index e6033f0f52..964c5217c7 100644
+index 2eea251352..2decda650c 100644
 --- a/skimage/transform/_warps.py
 +++ b/skimage/transform/_warps.py
-@@ -360,7 +360,7 @@ def rotate(image, angle, resize=False, center=None, order=1, mode='constant',
+@@ -353,7 +353,9 @@ def rotate(image, angle, resize=False, center=None, order=1, mode='constant',
      tform1 = SimilarityTransform(translation=center)
      tform2 = SimilarityTransform(rotation=np.deg2rad(angle))
      tform3 = SimilarityTransform(translation=-center)
 -    tform = tform3 + tform2 + tform1
-+    tform = tform1 @ tform2 @ tform3
++    # 2.7
++    tform = tform1.__matmul__(tform2).__matmul__(tform3)
++    # tform = tform1 @ tform2 @ tform3
  
      output_shape = None
      if resize:
-@@ -383,7 +383,8 @@ def rotate(image, angle, resize=False, center=None, order=1, mode='constant',
+@@ -376,7 +378,8 @@ def rotate(image, angle, resize=False, center=None, order=1, mode='constant',
          # fit output image in new shape
          translation = (minc, minr)
          tform4 = SimilarityTransform(translation=translation)
 -        tform = tform4 + tform
-+        tform = tform @ tform4
-+
++        # tform = tform @ tform4
++        tform = tform.__matmul__(tform4)
  
-     return warp(image, tform, output_shape=output_shape, order=order,
-                 mode=mode, cval=cval, clip=clip, preserve_range=preserve_range)
-@@ -839,8 +840,9 @@ def warp(image, inverse_map, map_args={}, output_shape=None, order=1,
+     # Make sure the transform is exactly affine, to ensure fast warping.
+     tform.params[2] = (0, 0, 1)
+@@ -830,8 +833,9 @@ def warp(image, inverse_map, map_args={}, output_shape=None, order=1,
              matrix = inverse_map.params
  
          elif (hasattr(inverse_map, '__name__') and
@@ -422,7 +425,7 @@ index e6033f0f52..964c5217c7 100644
              matrix = np.linalg.inv(inverse_map.__self__.params)
  
 diff --git a/skimage/transform/tests/test_geometric.py b/skimage/transform/tests/test_geometric.py
-index 4f3ec69a54..7c091c1cc8 100644
+index 4f3ec69a54..691147f75e 100644
 --- a/skimage/transform/tests/test_geometric.py
 +++ b/skimage/transform/tests/test_geometric.py
 @@ -8,6 +8,7 @@
@@ -442,7 +445,7 @@ index 4f3ec69a54..7c091c1cc8 100644
  
  
  def test_fundamental_matrix_estimation():
-@@ -345,23 +346,49 @@ def test_union():
+@@ -345,23 +346,55 @@ def test_union():
      tform1 = SimilarityTransform(scale=0.1, rotation=0.3)
      tform2 = SimilarityTransform(scale=0.1, rotation=0.9)
      tform3 = SimilarityTransform(scale=0.1 ** 2, rotation=0.3 + 0.9)
@@ -454,7 +457,8 @@ index 4f3ec69a54..7c091c1cc8 100644
 +    assert tform.__class__ == SimilarityTransform
 +
 +    # Multiply version swaps the order of operands to match linear algebra
-+    tform = tform2 @ tform1
++    # tform = tform2 @ tform1
++    tform = tform2.__matmul__(tform1)
      assert_almost_equal(tform.params, tform3.params)
 +    assert tform.__class__ == SimilarityTransform
 +
@@ -468,7 +472,8 @@ index 4f3ec69a54..7c091c1cc8 100644
 +    assert_almost_equal(tform.params, tform3.params)
 +    assert tform.__class__ == ProjectiveTransform
 +
-+    tform = tform2 @ tform1
++    # tform = tform2 @ tform1
++    tform = tform2.__matmul__(tform1)
      assert_almost_equal(tform.params, tform3.params)
      assert tform.__class__ == ProjectiveTransform
  
@@ -476,8 +481,10 @@ index 4f3ec69a54..7c091c1cc8 100644
 -    assert_almost_equal((tform + tform.inverse).params, np.eye(3))
 +    with expected_warnings(['deprecated']):
 +        assert_almost_equal((tform + tform.inverse).params, np.eye(3))
-+    assert_almost_equal((tform @ tform.inverse).params, np.eye(3))
-+    assert_almost_equal((tform.inverse @ tform).params, np.eye(3))
++    # assert_almost_equal((tform @ tform.inverse).params, np.eye(3))
++    # assert_almost_equal((tform.inverse @ tform).params, np.eye(3))
++    assert_almost_equal((tform.__matmul__(tform.inverse)).params, np.eye(3))
++    assert_almost_equal((tform.inverse.__matmul__(tform)).params, np.eye(3))
  
      tform1 = SimilarityTransform(scale=0.1, rotation=0.3)
      tform2 = SimilarityTransform(scale=0.1, rotation=0.9)
@@ -486,17 +493,19 @@ index 4f3ec69a54..7c091c1cc8 100644
 +    with expected_warnings(['deprecated']):
 +        tform = tform1 + tform2.inverse
 +    assert_almost_equal(tform.params, tform3.params)
-+    tform = tform2.inverse @ tform1
++    # tform = tform2.inverse @ tform1
++    tform = tform2.inverse.__matmul__(tform1)
 +    assert_almost_equal(tform.params, tform3.params)
 +
 +    tform1 = SimilarityTransform(scale=0.1, rotation=0.3)
 +    tform2 = SimilarityTransform(translation=(10, 20))
 +    tform3 = SimilarityTransform(scale=0.1, rotation=0.3, translation=(10, 20))
-+    tform = tform2 @ tform1
++    # tform = tform2 @ tform1
++    tform = tform2.__matmul__(tform1)
      assert_almost_equal(tform.params, tform3.params)
  
  
-@@ -369,7 +396,12 @@ def test_union_differing_types():
+@@ -369,7 +402,12 @@ def test_union_differing_types():
      tform1 = SimilarityTransform()
      tform2 = PolynomialTransform()
      with testing.raises(TypeError):
@@ -505,12 +514,12 @@ index 4f3ec69a54..7c091c1cc8 100644
 +            tform1.__add__(tform2)
 +
 +    with testing.raises(TypeError):
-+        tform1 @ tform2
-+
++            # tform1 @ tform2
++            tform1.__matmul__(tform2)
  
  
  def test_geometric_tform():
-@@ -377,9 +409,12 @@ def test_geometric_tform():
+@@ -377,9 +415,12 @@ def test_geometric_tform():
      with testing.raises(NotImplementedError):
          tform(0)
      with testing.raises(NotImplementedError):
@@ -518,10 +527,10 @@ index 4f3ec69a54..7c091c1cc8 100644
 +        tform.inverse
 +    with testing.raises(NotImplementedError):
 +        with expected_warnings(['deprecated']):
-+            tform @ 0
++            tform.__add__(0)
      with testing.raises(NotImplementedError):
 -        tform.__add__(0)
-+        tform @ 0
++        tform.__matmul__(0)
  
  
  def test_invalid_input():
