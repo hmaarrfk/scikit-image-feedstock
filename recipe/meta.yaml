@@ -7,9 +7,13 @@ package:
 source:
   git_url: https://github.com/scikit-image/scikit-image
   git_tag: v{{ version }}
+  patches:
+    - 3458.patch
+    - 0001-_marching_cubes_lewiner_cy-mark-char-as-signed.patch
+    - 0002-Mark-some-tests-as-xfail-if-numpy-uses-mkl.patch
 
 build:
-  number: 1001
+  number: 0
   script:
     - rm -rf skimage/viewer/tests  # we don't depend on Qt
     - python setup.py install --single-version-externally-managed --record=record.txt
